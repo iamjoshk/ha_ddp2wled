@@ -38,7 +38,7 @@ The JSON output has always been correct:
     "fx": 0,
     "sel": true
   },
-  "liv": false
+  "live": false
 }
 ```
 

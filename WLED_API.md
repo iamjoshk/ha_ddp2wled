@@ -67,7 +67,7 @@ The integration sends JSON in this format (includes parameters for reliable devi
 {
   "on": true,
   "bri": 128,
-  "liv": false,
+  "live": false,
   "seg": {
     "id": 0,
     "fx": 0,
@@ -84,7 +84,7 @@ The integration sends JSON in this format (includes parameters for reliable devi
 Where:
 - `on`: Turn WLED on/off
 - `bri`: Brightness (0-255)
-- `liv`: Live override (false = apply changes immediately to device)
+- `live`: Live override (false = apply changes immediately to device)
 - `seg.id`: Segment ID
 - `seg.fx`: Effect ID (0 = Solid, required for individual LED control)
 - `seg.sel`: Mark segment as selected/active
@@ -247,7 +247,7 @@ The Pixel Magic Tool integration uses these WLED JSON API features:
 | `seg.sx` | int | Effect speed |
 | `seg.ix` | int | Effect intensity |
 | `seg.sel` | boolean | Mark segment as selected/active |
-| `liv` | boolean | Live override mode |
+| `live` | boolean | Live override mode |
 
 ### Important Parameters for Device Updates
 
@@ -310,7 +310,7 @@ curl http://192.168.1.100/json/state
    - Check network latency
 
 4. **No Visual Change / Preview Shows but Device Doesn't Update**
-   - **FIXED**: The integration now automatically sets the correct parameters (`fx=0`, `sel=true`, `liv=false`) to ensure device updates
+   - **FIXED**: The integration now automatically sets the correct parameters (`fx=0`, `sel=true`, `live=false`) to ensure device updates
    - If using older versions, verify segment is active
    - Check brightness isn't 0
    - Ensure LEDs are properly connected

@@ -35,7 +35,7 @@ This document specifies the JSON format requirements for the PixelMagicTool inte
 ```json
 {
   "on": true,
-  "liv": false,
+  "live": false,
   "sel": true
 }
 ```
@@ -97,7 +97,7 @@ Here's a complete, correctly formatted WLED JSON payload:
     "fx": 0,
     "sel": true
   },
-  "liv": false
+  "live": false
 }
 ```
 
@@ -119,7 +119,7 @@ wled_data = {
         "fx": 0,
         "sel": True  # Python True → JSON true
     },
-    "liv": False  # Python False → JSON false
+    "live": False  # Python False → JSON false
 }
 
 # Correct: Use json.dumps()
@@ -159,7 +159,7 @@ const wledData = {
         fx: 0,
         sel: true  // JavaScript true → JSON true
     },
-    liv: false  // JavaScript false → JSON false
+    live: false  // JavaScript false → JSON false
 };
 
 // Correct: Use JSON.stringify()
