@@ -65,6 +65,8 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 - The generated WLED JSON
 - Segment ID, brightness, and dimensions used
 
+**👉 See [EXAMPLES.md](EXAMPLES.md) for complete automation examples!**
+
 ## Usage Examples
 
 ### Example 1: Display Spotify Album Art
