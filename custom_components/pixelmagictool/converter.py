@@ -488,14 +488,13 @@ class PixelMagicToolAPI:
         expanded = []
         i = 0
         
-        while i < len(range_data) - 2:
+        while i <= len(range_data) - 3:
             start = range_data[i]
             end = range_data[i + 1]
             color = range_data[i + 2]
             
-            # Add color for each LED in the range
-            for _ in range(start, end + 1):
-                expanded.append(color)
+            # Add color for each LED in the range (more efficient using list multiplication)
+            expanded.extend([color] * (end - start + 1))
             
             i += 3
         
