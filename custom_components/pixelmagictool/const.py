@@ -15,6 +15,8 @@ CONF_HEIGHT = "height"
 CONF_PATTERN = "pattern"
 CONF_TRANSPARENT_COLOR = "transparent_color"
 CONF_API_URL = "api_url"
+CONF_COMPRESSION = "compression"
+CONF_COMPRESSION_LEVEL = "compression_level"
 
 # Default values
 DEFAULT_SEGMENT_ID = 0
@@ -23,6 +25,8 @@ DEFAULT_WIDTH = 16
 DEFAULT_HEIGHT = 16
 DEFAULT_PATTERN = "range"
 DEFAULT_API_URL = "https://pixelmagictool.vercel.app/api/wled/image"
+DEFAULT_COMPRESSION = False
+DEFAULT_COMPRESSION_LEVEL = 5
 
 # Pattern types
 PATTERN_INDIVIDUAL = "individual"

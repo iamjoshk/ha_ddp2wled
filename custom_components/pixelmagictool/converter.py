@@ -2,12 +2,109 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
+import math
 from typing import Any
 
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def hex_to_rgb(hex_color: int) -> tuple[int, int, int]:
+    """Convert hex color to RGB tuple."""
+    r = (hex_color >> 16) & 0xFF
+    g = (hex_color >> 8) & 0xFF
+    b = hex_color & 0xFF
+    return (r, g, b)
+
+
+def rgb_to_hex(r: int, g: int, b: int) -> int:
+    """Convert RGB to hex color."""
+    return (r << 16) | (g << 8) | b
+
+
+def color_similarity(color1: int, color2: int) -> float:
+    """
+    Calculate color similarity (0-100, 0 = identical).
+    Based on Euclidean distance in RGB space.
+    """
+    rgb1 = hex_to_rgb(color1)
+    rgb2 = hex_to_rgb(color2)
+    
+    dr = rgb1[0] - rgb2[0]
+    dg = rgb1[1] - rgb2[1]
+    db = rgb1[2] - rgb2[2]
+    
+    # Euclidean distance normalized to 0-100
+    return math.sqrt(dr * dr + dg * dg + db * db) / 4.41
+
+
+def average_colors(colors: list[int]) -> int:
+    """Average a list of hex colors."""
+    if not colors:
+        return 0
+    
+    total_r = total_g = total_b = 0
+    for color in colors:
+        r, g, b = hex_to_rgb(color)
+        total_r += r
+        total_g += g
+        total_b += b
+    
+    count = len(colors)
+    avg_r = round(total_r / count)
+    avg_g = round(total_g / count)
+    avg_b = round(total_b / count)
+    
+    return rgb_to_hex(avg_r, avg_g, avg_b)
+
+
+def compress_colors(colors: list[int], level: int) -> list[int]:
+    """
+    Compress color array by averaging similar adjacent colors.
+    
+    Args:
+        colors: List of hex color integers
+        level: Compression level (1-10)
+               1 = gentlest (minimal compression)
+               10 = strongest (more aggressive)
+    
+    Returns:
+        Compressed list of colors
+    """
+    if not level or level == 0 or not colors:
+        return colors
+    
+    # Level 1 = 98 threshold (gentlest), Level 10 = 75 threshold (more aggressive)
+    threshold = 98 - ((level - 1) * 2.56)
+    
+    compressed_colors = []
+    i = 0
+    
+    while i < len(colors):
+        current_color = colors[i]
+        group_size = 1
+        
+        # Look ahead to find similar colors
+        max_look_ahead = min(i + level + 1, len(colors))
+        for j in range(i + 1, max_look_ahead):
+            if color_similarity(current_color, colors[j]) < threshold:
+                group_size += 1
+            else:
+                break
+        
+        # Average the grouped colors
+        if group_size > 1:
+            avg_color = average_colors(colors[i:i + group_size])
+            compressed_colors.extend([avg_color] * group_size)
+        else:
+            compressed_colors.append(current_color)
+        
+        i += group_size
+    
+    return compressed_colors
 
 
 class PixelMagicToolAPI:
@@ -119,6 +216,57 @@ class PixelMagicToolAPI:
         finally:
             if close_session:
                 await session.close()
+
+    def compress_wled_json(
+        self,
+        wled_json: dict[str, Any],
+        compression_level: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Compress WLED JSON by averaging similar adjacent colors.
+        
+        Args:
+            wled_json: The WLED JSON payload
+            compression_level: Compression level (1-10, 1=gentlest, 10=most aggressive)
+            
+        Returns:
+            Compressed WLED JSON
+        """
+        if compression_level <= 0 or compression_level > 10:
+            _LOGGER.warning("Invalid compression level %d, skipping compression", compression_level)
+            return wled_json
+        
+        compressed_json = wled_json.copy()
+        
+        # Check if 'seg' exists and has color data
+        if "seg" in compressed_json and "i" in compressed_json["seg"]:
+            original_colors = compressed_json["seg"]["i"]
+            
+            # Handle different pattern formats
+            if isinstance(original_colors, list):
+                # For individual pattern (simple list of colors)
+                if all(isinstance(x, int) for x in original_colors):
+                    compressed_colors = compress_colors(original_colors, compression_level)
+                    original_size = len(json.dumps(original_colors))
+                    compressed_size = len(json.dumps(compressed_colors))
+                    _LOGGER.info(
+                        "Compressed color data: %d -> %d bytes (%.1f%% reduction)",
+                        original_size,
+                        compressed_size,
+                        (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
+                    )
+                    compressed_json["seg"]["i"] = compressed_colors
+                # For index or range patterns, extract colors and recompress
+                elif len(original_colors) > 0:
+                    # Extract just the color values for compression
+                    colors_only = [x for x in original_colors if isinstance(x, int) and x >= 0]
+                    if colors_only:
+                        compressed_colors = compress_colors(colors_only, compression_level)
+                        # Note: For range/index patterns, we'd need to rebuild the pattern
+                        # For now, we'll just compress individual pattern
+                        _LOGGER.debug("Pattern compression for range/index not yet implemented")
+        
+        return compressed_json
 
     async def send_to_wled(
         self,

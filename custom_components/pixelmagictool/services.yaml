@@ -74,6 +74,21 @@ convert_image:
       required: false
       selector:
         text:
+    compression:
+      name: Enable Compression
+      description: Compress color data to reduce payload size (helpful for large images)
+      default: false
+      selector:
+        boolean:
+    compression_level:
+      name: Compression Level
+      description: Compression strength (1=gentlest, 10=most aggressive)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: slider
 
 send_to_wled:
   name: Send to WLED
@@ -167,4 +182,19 @@ send_to_wled:
       required: false
       selector:
         text:
+    compression:
+      name: Enable Compression
+      description: Compress color data to reduce payload size (helpful for large images)
+      default: false
+      selector:
+        boolean:
+    compression_level:
+      name: Compression Level
+      description: Compression strength (1=gentlest, 10=most aggressive)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: slider
 

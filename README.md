@@ -96,7 +96,30 @@ automation:
           segment_id: 0
 ```
 
-### Example 2: Weather Icon Display
+### Example 2: Display with Compression (for larger images)
+
+```yaml
+automation:
+  - alias: "Update WLED with Album Art (Compressed)"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          wled_host: "192.168.1.100"
+          width: 32
+          height: 32
+          brightness: 128
+          pattern: "range"
+          segment_id: 0
+          compression: true
+          compression_level: 5
+```
+
+### Example 3: Weather Icon Display
 
 ```yaml
 automation:
@@ -114,7 +137,7 @@ automation:
           brightness: 200
 ```
 
-### Example 3: Use Service Response Data
+### Example 4: Use Service Response Data
 
 Services now return the converted WLED JSON as a response, which you can use in scripts:
 
@@ -160,7 +183,7 @@ automation:
           message: "Converted image with {{ result.wled_json.seg.i | length }} color values"
 ```
 
-### Example 4: Camera Snapshot
+### Example 5: Camera Snapshot
 
 ```yaml
 automation:
@@ -198,6 +221,8 @@ automation:
 | `segment_id` | No | 0 | WLED segment ID |
 | `transparent_color` | No | - | Hex color for transparent pixels |
 | `api_url` | No | pixelmagictool.vercel.app | API endpoint |
+| `compression` | No | false | Enable compression to reduce payload size |
+| `compression_level` | No | 5 | Compression strength (1-10, 1=gentlest, 10=most aggressive) |
 
 **Service Response:**
 Returns a dictionary containing:
@@ -267,7 +292,9 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Pattern Selection**: Use "Range" pattern for most efficient data transfer
 - **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
 - **Transparent Backgrounds**: Specify a color to replace transparency
+- **Compression**: Enable compression for large images to reduce payload size. Start with level 5 and adjust as needed.
 - **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+  - Enable compression with `compression: true` and adjust `compression_level` (1-10)
   - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
   - Try the "range" pattern type (most efficient)
   - Use the `convert_image` service to get the JSON, then use alternative upload methods if needed

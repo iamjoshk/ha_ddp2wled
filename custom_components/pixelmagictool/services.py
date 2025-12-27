@@ -14,6 +14,8 @@ from homeassistant.helpers.service import SupportsResponse
 
 from .const import (
     CONF_BRIGHTNESS,
+    CONF_COMPRESSION,
+    CONF_COMPRESSION_LEVEL,
     CONF_HEIGHT,
     CONF_PATTERN,
     CONF_SEGMENT_ID,
@@ -22,6 +24,8 @@ from .const import (
     CONF_WIDTH,
     CONF_API_URL,
     DEFAULT_BRIGHTNESS,
+    DEFAULT_COMPRESSION,
+    DEFAULT_COMPRESSION_LEVEL,
     DEFAULT_HEIGHT,
     DEFAULT_PATTERN,
     DEFAULT_SEGMENT_ID,
@@ -48,6 +52,10 @@ CONVERT_IMAGE_SCHEMA = vol.Schema(
         vol.Optional(CONF_SEGMENT_ID, default=DEFAULT_SEGMENT_ID): cv.positive_int,
         vol.Optional(CONF_TRANSPARENT_COLOR): cv.string,
         vol.Optional(CONF_API_URL, default=DEFAULT_API_URL): cv.string,
+        vol.Optional(CONF_COMPRESSION, default=DEFAULT_COMPRESSION): cv.boolean,
+        vol.Optional(CONF_COMPRESSION_LEVEL, default=DEFAULT_COMPRESSION_LEVEL): vol.All(
+            cv.positive_int, vol.Range(min=1, max=10)
+        ),
     }
 )
 
@@ -90,6 +98,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             )
 
             _LOGGER.info("Image conversion successful")
+
+            # Apply compression if enabled
+            if call.data.get(CONF_COMPRESSION, DEFAULT_COMPRESSION):
+                compression_level = call.data.get(CONF_COMPRESSION_LEVEL, DEFAULT_COMPRESSION_LEVEL)
+                _LOGGER.info("Applying compression (level %d)", compression_level)
+                result = api.compress_wled_json(result, compression_level)
 
             # Fire lightweight event for sensor (without large result data)
             hass.bus.async_fire(
@@ -144,6 +158,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 height=call.data.get(CONF_HEIGHT),
                 transparent_color=call.data.get(CONF_TRANSPARENT_COLOR),
             )
+
+            # Apply compression if enabled
+            if call.data.get(CONF_COMPRESSION, DEFAULT_COMPRESSION):
+                compression_level = call.data.get(CONF_COMPRESSION_LEVEL, DEFAULT_COMPRESSION_LEVEL)
+                _LOGGER.info("Applying compression (level %d)", compression_level)
+                result = api.compress_wled_json(result, compression_level)
 
             # Fire lightweight event for sensor (without large result data)
             hass.bus.async_fire(
