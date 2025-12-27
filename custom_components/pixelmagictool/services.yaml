@@ -1,6 +1,8 @@
 convert_image:
   name: Convert Image
-  description: Convert an image from a URL to WLED format using the Pixel Magic Tool API
+  description: Convert an image from a URL to WLED format using the Pixel Magic Tool API. Returns the converted WLED JSON as a service response.
+  response:
+    optional: true
   fields:
     image_url:
       name: Image URL
@@ -72,10 +74,27 @@ convert_image:
       required: false
       selector:
         text:
+    compression:
+      name: Enable Compression
+      description: Compress color data to reduce payload size (helpful for large images)
+      default: false
+      selector:
+        boolean:
+    compression_level:
+      name: Compression Level
+      description: Compression strength (1=gentlest, 10=most aggressive)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: slider
 
 send_to_wled:
   name: Send to WLED
-  description: Convert an image and send it directly to a WLED device
+  description: Convert an image and send it directly to a WLED device. Returns the result status and WLED JSON as a service response.
+  response:
+    optional: true
   fields:
     image_url:
       name: Image URL
@@ -163,4 +182,19 @@ send_to_wled:
       required: false
       selector:
         text:
+    compression:
+      name: Enable Compression
+      description: Compress color data to reduce payload size (helpful for large images)
+      default: false
+      selector:
+        boolean:
+    compression_level:
+      name: Compression Level
+      description: Compression strength (1=gentlest, 10=most aggressive)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: slider
 
