@@ -321,8 +321,11 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 ## Credits & Acknowledgments
 
 - Original Pixel Magic Tool web interface and API by [@ajotanc](https://github.com/ajotanc)
+- Apollo Automation's maintained fork: [@ApolloAutomation/PixelMagicTool](https://github.com/ApolloAutomation/PixelMagicTool)
 - Home Assistant custom integration and HACS packaging
 - WLED project by [@Aircoookie](https://github.com/Aircoookie/WLED)
+
+**Note**: The Home Assistant add-on automatically fetches the latest version of the Pixel Magic Tool web interface from [Apollo Automation's repository](https://github.com/ApolloAutomation/PixelMagicTool) at build time, ensuring you always have the most recent version.
 
 ## Support & Contributing
 
@@ -340,20 +343,20 @@ See [LICENSE](LICENSE) file for details.
 
 ## Standalone Web Interface
 
-The repository also includes standalone HTML tools that can be used independently:
+The repository also includes standalone HTML tools that can be used independently. These are maintained by Apollo Automation:
 
 ### Interface Version (`pxmagic.htm`)
 - Full-featured web interface with preview and simulation
 - Can be saved locally or uploaded to WLED's filesystem
 - Access at `http://[WLED-IP]/pxmagic.htm` if uploaded to WLED
 
-[Download Interface Version](https://raw.githubusercontent.com/iamjoshk/PixelMagicTool/main/pxmagic.htm)
+[Download Interface Version](https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/pxmagic.htm)
 
 ### Inline Version (`inpxmagic.htm`)
 - URL parameter-based conversion
 - Useful for direct links and automation scripts
 
-[Download Inline Version](https://raw.githubusercontent.com/iamjoshk/PixelMagicTool/main/inpxmagic.htm)
+[Download Inline Version](https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/inpxmagic.htm)
 
 ### Direct API Usage
 

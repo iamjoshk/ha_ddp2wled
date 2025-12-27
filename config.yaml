@@ -1,8 +1,8 @@
 name: "Pixel Magic Tool"
 version: "1.0.0"
 slug: "pixelmagictool"
-description: "A tool that converts any image into code in JSON WLED format for 2D Matrix panels"
-url: "https://github.com/iamjoshk/PixelMagicTool"
+description: "A tool that converts any image into code in JSON WLED format for 2D Matrix panels. Uses Apollo Automation's PixelMagicTool."
+url: "https://github.com/ApolloAutomation/PixelMagicTool"
 arch:
   - armhf
   - armv7
