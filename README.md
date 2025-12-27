@@ -32,173 +32,345 @@ This integration provides **Home Assistant services** that can:
 3. Click the three dots in the top right corner
 4. Select "Custom repositories"
 5. Add this repository URL: `https://github.com/iamjoshk/PixelMagicTool`
-6. Select category: "Add-on"
+6. Select category: "Integration"
 7. Click "Add"
-8. Find "Pixel Magic Tool" in the add-on store
-9. Click "Install"
-10. Start the add-on
-11. Access through the Home Assistant UI
+8. Find "Pixel Magic Tool" in the integration list
+9. Click "Download"
+10. Restart Home Assistant
+11. Go to Settings → Devices & Services
+12. Click "+ Add Integration"
+13. Search for "Pixel Magic Tool" and add it
 
 ### Manual Installation
 
-1. Navigate to your Home Assistant's `/addons` directory
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/iamjoshk/PixelMagicTool.git
-   ```
-3. Restart Home Assistant
-4. Go to Supervisor → Add-on Store
-5. Refresh the page
-6. Find "Pixel Magic Tool" in the local add-ons section
-7. Click "Install"
+1. Copy the `custom_components/pixelmagictool` directory to your Home Assistant's `custom_components` directory
+2. Restart Home Assistant
+3. Go to Settings → Devices & Services
+4. Click "+ Add Integration"
+5. Search for "Pixel Magic Tool" and add it
+
+## Quick Start
+
+Once installed, the integration provides two services and a sensor:
+
+### Services
+
+1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON (stores in sensor)
+2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device
+
+### Sensor
+
+The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that stores:
+- The last converted image URL
+- The generated WLED JSON
+- Segment ID, brightness, and dimensions used
+
+## Usage Examples
+
+### Example 1: Display Spotify Album Art
+
+```yaml
+automation:
+  - alias: "Update WLED with Album Art"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          wled_host: "192.168.1.100"
+          width: 32
+          height: 32
+          brightness: 128
+          pattern: "range"
+          segment_id: 0
+```
+
+### Example 2: Weather Icon Display
+
+```yaml
+automation:
+  - alias: "Show Weather on LED Matrix"
+    trigger:
+      - platform: state
+        entity_id: weather.home
+    action:
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "https://example.com/weather/{{ states('weather.home') }}.png"
+          wled_host: "192.168.1.100"
+          width: 16
+          height: 16
+          brightness: 200
+```
+
+### Example 3: Convert Only (Store in Sensor)
+
+```yaml
+automation:
+  - alias: "Convert Image to Sensor"
+    trigger:
+      - platform: state
+        entity_id: sensor.doorbell_snapshot
+        attribute: url
+    action:
+      - service: pixelmagictool.convert_image
+        data:
+          image_url: "{{ state_attr('sensor.doorbell_snapshot', 'url') }}"
+          width: 64
+          height: 64
+          brightness: 255
+          segment_id: 1
+```
+
+Then use the sensor data in scripts:
+
+```yaml
+script:
+  send_stored_conversion:
+    sequence:
+      - service: rest_command.send_to_wled
+        data:
+          payload: "{{ state_attr('sensor.pixel_magic_tool_last_conversion', 'wled_json') }}"
+```
+
+### Example 4: Camera Snapshot
+
+```yaml
+automation:
+  - alias: "Show Camera on LED Display"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.front_door_motion
+        to: "on"
+    action:
+      - service: camera.snapshot
+        target:
+          entity_id: camera.front_door
+        data:
+          filename: /config/www/snapshots/front_door.jpg
+      - delay: 1
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "http://homeassistant.local:8123/local/snapshots/front_door.jpg"
+          wled_host: "192.168.1.100"
+          width: 32
+          height: 32
+```
+
+## Service Parameters
+
+### `pixelmagictool.convert_image`
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `image_url` | Yes | - | URL of image (supports templates) |
+| `width` | No | API default (16) | Target width in pixels |
+| `height` | No | API default (16) | Target height in pixels |
+| `brightness` | No | 128 | LED brightness (0-255) |
+| `pattern` | No | `range` | Pattern type: `individual`, `index`, or `range` |
+| `segment_id` | No | 0 | WLED segment ID |
+| `transparent_color` | No | - | Hex color for transparent pixels |
+| `api_url` | No | pixelmagictool.vercel.app | API endpoint |
+
+### `pixelmagictool.send_to_wled`
+
+Same as `convert_image` plus:
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `wled_host` | Yes | - | IP address or hostname of WLED device |
+| `timeout` | No | 10 | Request timeout in seconds |
+
+## Sensor Attributes
+
+The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
+
+- `last_image_url` - The URL of the last converted image
+- `wled_json` - The complete WLED JSON payload (as string)
+- `segment_id` - Segment ID used
+- `brightness` - Brightness level used
+- `dimensions` - Image dimensions (if available)
+
+Access these in templates:
+```yaml
+{{ state_attr('sensor.pixel_magic_tool_last_conversion', 'wled_json') }}
+```
 
 ## Features
 
-- 🎨 Converts any type of image to WLED JSON format
-- 📋 Multiple output formats: WLED JSON, Home Assistant YAML, CURL commands
+- 🎨 Converts any type of image to WLED JSON format using the Pixel Magic Tool API
+- 📋 Automatic conversion triggered by sensor state changes
 - 🎭 Pattern selection (Individual, Index, Range)
 - 💡 Adjustable brightness control
-- 🎬 Convert animated GIFs with playlist support
 - 📐 Image resizing capabilities
 - 🌈 Convert transparent pixels to chosen color
-- 🗜️ Compression options for large images
-- 👁️ Live preview and simulation
-- 💾 Save directly to WLED, copy to clipboard, or download generated code
-- 🔗 Select images directly from **[WLED-IP]/edit** or upload local files
+- 📊 Sensor that stores the last conversion for reuse
+- 🔗 Works with any image URL including Home Assistant sensor attributes
+- 🤖 Perfect for automations with media players, weather, cameras, and more
+- 💾 Can convert-only or convert-and-send in one action
 
-## Usage
+## Pattern Types Explained
 
-### As a Home Assistant Add-on
+- **Range**: Most efficient, groups consecutive identical colors `[start, end, color]`
+- **Index**: Explicit positioning `[0, color0, 1, color1, ...]`  
+- **Individual**: Simple list of colors `[color0, color1, color2, ...]`
 
-1. Open the Pixel Magic Tool add-on from your Home Assistant sidebar
-2. Enter your WLED device IP address or hostname
-3. Upload an image or select from WLED's storage
-4. Configure your preferences:
-   - Select segment and dimensions
-   - Choose output format
-   - Adjust brightness
-   - Enable compression if needed
-5. Click "Generate" to create the WLED code
-6. Use the generated output:
-   - Save directly to WLED
-   - Copy to clipboard
-   - Download as file
-   - Simulate on your device
+For HUB75 panels, **Range** pattern typically provides the best balance of size and compatibility.
 
-### Tips for Best Results
+## Tips for Best Results
 
-- **Large Images**: Enable compression for images over 100x100 pixels
-- **Pattern Selection**: Use "Range" pattern for best data compression
-- **Testing**: Use the Simulate button before saving presets
-- **Image Management**: Access WLED's file manager at `http://[WLED-IP]/edit`
+- **Image URLs**: Use full URLs or Home Assistant local URLs (`http://homeassistant.local:8123/...`)
+- **Dimensions**: Match your WLED segment configuration (e.g., 32x32, 64x32)
+- **Pattern Selection**: Use "Range" pattern for most efficient data transfer
+- **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
+- **Transparent Backgrounds**: Specify a color to replace transparency
 
-### Animated GIFs
+## Advanced Usage
 
-The tool supports animated GIF conversion:
+### Using with Node-RED
 
-1. Enable "Animation" toggle
-2. Upload or select a GIF
-3. Set frame count (0 = all frames)
-4. Configure duration and transition
-5. Generate and save as WLED playlist
+You can call the services from Node-RED:
+
+```json
+{
+    "domain": "pixelmagictool",
+    "service": "send_to_wled",
+    "data": {
+        "image_url": "{{payload.image_url}}",
+        "wled_host": "192.168.1.100",
+        "width": 32,
+        "height": 32
+    }
+}
+```
+
+### Using Sensor Data in REST Commands
+
+Define a REST command to send stored conversions:
+
+```yaml
+rest_command:
+  send_wled_json:
+    url: "http://{{ wled_host }}/json/state"
+    method: POST
+    content_type: "application/json"
+    payload: "{{ wled_json }}"
+```
+
+Then call it:
+
+```yaml
+service: rest_command.send_wled_json
+data:
+  wled_host: "192.168.1.100"
+  wled_json: "{{ state_attr('sensor.pixel_magic_tool_last_conversion', 'wled_json') }}"
+```
 
 ## Configuration
 
-The add-on has minimal configuration. See [DOCS.md](DOCS.md) for detailed documentation.
+The integration has minimal configuration. After adding it through the UI, it will:
+- Create a sensor entity for storing conversions
+- Register two services for converting and sending images
+- Be ready to use in your automations
 
-```yaml
-log_level: info
-```
+See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (available at `pxmagic.htm` and `inpxmagic.htm`).
 
-### Improvements and fixes
-### (12/7/2025)
-- Added chunking to send larger amounts of data to WLED
-- Added compression system to reduce amount of data
+## Troubleshooting
 
-### (25/10/2023)
- - Correction in animation generation that was actually breaking
- - Button to return to WLED if pxmagic.htm is accessed via url (http://), if accessed via external (file://) the button will not show
- - Adjustments to CSS and some features
- - Rremoving unnecessary html
- - Correction of CORS error when using the file locally, it was unable to generate the images that are saved in WLED
+### Integration Not Loading
 
-#### (15/06/2023)
-- Changing the use of **document**
-- Creation of function **element** to be reduced in relation to **document.getElementById**
-- Fixes
-- Image being generated according to its size
-- Re-creation of the redone image
-- Reworked Resize, if your segment is 20x20 and you want to use 16x16 it will be fine, credits @blazoncek 
-- Default Segment Default as 0 and **data-width** and **data-height** as 16 if user opens via Desktop and not via WLED, credits @ALDIY#2452 
-- Final file size reduction
-- Improved functionality and interaction between parameters
--
-#### (12/06/2023)
-- The API domain was **ajota.vercel.app** now it's **pixelmagictool.vercel.app**
-- Performance in **pxmagic** and **inpxmagic** version
-- Significantly decreased **pxmagic.htm** file size
-- **range** pattern now in hybrid style to improve JSON size
-- Version name change from **interface.htm** to **pxmagic.htm**
-- Version name change from **inline.htm** to **inpxmagic.htm**
+1. Check Home Assistant logs: Settings → System → Logs
+2. Verify the `custom_components/pixelmagictool` directory is in the correct location
+3. Restart Home Assistant after installation
+4. Ensure you have an active internet connection (for API access)
 
-#### (09/06/2023)
-- Fixed animation generation
-- Fixed drag and drop function
-- Fix when saving presets and playlist
-- Function performance fixes
-- Parameter text interpretation
-- Interaction of functionality
-- Save presets via API
-- Auto default segment width and height
+### Service Call Fails
 
-## INTERFACE VERSION
-### Download
-**Right-Click** [[Interface]](https://raw.githubusercontent.com/ajotanc/wled-matrix-converter/main/pxmagic.htm) and select save to your local computer.
+- **"Image download failed"**: Check that the image URL is accessible from your Home Assistant instance
+- **"API error"**: The Pixel Magic Tool API at pixelmagictool.vercel.app may be unavailable
+- **"WLED connection failed"**: Verify WLED device IP/hostname and network connectivity
 
-### Tutorial
-Showing usability in the interface version in an easy, simple and intuitive way.
+### Image Not Displaying Correctly on WLED
 
-https://github.com/ajotanc/wled-matrix-converter/assets/47322034/20ad60d1-3b01-42b6-9937-4dda3862a3a4
+- Check segment configuration in WLED matches width/height parameters
+- Try different pattern types (range, index, individual)
+- Verify your WLED version supports JSON state API
+- For HUB75 panels, ensure 2D configuration is set up correctly in WLED
 
-## INLINE VERSION
-### Download
-**Right-Click** [[Inline]](https://raw.githubusercontent.com/ajotanc/wled-matrix-converter/main/inpxmagic.htm) and select save to your local computer.
+### Sensor Not Updating
 
-### Example of what the URL looks like
-```
-  GET http://[WLED-IP]/inpxmagic.htm?id=0&output=ha&brightness=255&pre_segment=individual&device=pixel_art_controller_001&unique_id=pixel_art_controller_001a&friendly_name=PixelArt&hostname=[WLED-IP]&color=3CCFFE5&image=33.png&download=true&simulate=false
-```
-## CURL GENERATE WLED JSON
+- Check that the service call completed successfully in Home Assistant logs
+- The sensor updates via events - if the conversion fails, the sensor won't update
+- Verify the integration is properly set up in Settings → Devices & Services
+
+## Requirements
+
+- Home Assistant 2023.3.0 or newer
+- WLED device with 2D Matrix or HUB75 configuration
+- Network access to both your WLED device and pixelmagictool.vercel.app
+- For media player integration: Media player that provides `entity_picture` attribute
+
+## Credits & Acknowledgments
+
+- Original Pixel Magic Tool web interface and API by [@ajotanc](https://github.com/ajotanc)
+- Home Assistant custom integration and HACS packaging
+- WLED project by [@Aircoookie](https://github.com/Aircoookie/WLED)
+
+## Support & Contributing
+
+- **Issues**: [GitHub Issues](https://github.com/iamjoshk/PixelMagicTool/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/iamjoshk/PixelMagicTool/discussions)
+- **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)
+
+Pull requests are welcome! Please feel free to contribute improvements.
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## Standalone Web Interface
+
+The repository also includes standalone HTML tools that can be used independently:
+
+### Interface Version (`pxmagic.htm`)
+- Full-featured web interface with preview and simulation
+- Can be saved locally or uploaded to WLED's filesystem
+- Access at `http://[WLED-IP]/pxmagic.htm` if uploaded to WLED
+
+[Download Interface Version](https://raw.githubusercontent.com/iamjoshk/PixelMagicTool/main/pxmagic.htm)
+
+### Inline Version (`inpxmagic.htm`)
+- URL parameter-based conversion
+- Useful for direct links and automation scripts
+
+[Download Inline Version](https://raw.githubusercontent.com/iamjoshk/PixelMagicTool/main/inpxmagic.htm)
+
+### Direct API Usage
+
+You can also use the Pixel Magic Tool API directly:
+
 ```bash
-# Local image upload
-# Remember to change the \path\image.png path to the desired image path.
-curl -X POST -F "file=@\path\image.png" "https://pixelmagictool.vercel.app/api/wled/image?id=0&output=json&brightness=255&pre_segment=individual&hostname=10.0.0.41&color=CCFFE5"
+# Convert local image
+curl -X POST -F "file=@image.png" \
+  "https://pixelmagictool.vercel.app/api/wled/image?id=0&output=json&brightness=255&pattern=range&width=32&height=32"
 
-# External image upload
-curl -X POST -F "file=@-;filename=image.png" "https://pixelmagictool.vercel.app/api/wled/image?id=0&output=curl&brightness=255&pre_segment=individual&hostname=10.0.0.41&color=CCFFE5" < <(curl -s "https://img.freepik.com/premium-vector/lightning-pixel-art-gaming-item-game-pixel-lightning_158677-585.jpg")
-# OR
-curl -o /tmp/image.png -s "https://img.freepik.com/premium-vector/lightning-pixel-art-gaming-item-game-pixel-lightning_158677-585.jpg" && curl -X POST -F "file=@/tmp/image.png" "https://pixelmagictool.vercel.app/api/wled/image?id=0&output=curl&brightness=255&pre_segment=individual&hostname=10.0.0.41&color=3CCFFE5"
+# Convert from URL
+curl -X POST -F "file=@-;filename=image.png" \
+  "https://pixelmagictool.vercel.app/api/wled/image?id=0&output=json&brightness=255&pattern=range" \
+  < <(curl -s "https://example.com/image.png")
 ```
 
-#### Description of parameters
-| Parameters | Type | Description | Default | Required |
-| ---------- | ---- | ------- | ----------- | -------- | 
-| `id` | `integer` | Segment id | **0** | ✅
-| `output` or `o` | `string` | Output type, options [json, curl, ha] | **json** | ✅
-| `brightness` or `bri` | `integer` | Brightness of the LEDs | **128** | ✅
-| `pattern` or `pat` | `string` | Pattern type, options [individual ["FFFFFF"], index [0, "FFFFFF"], range [0, 5, "FFFFFF"] | **individual** | ✅
-| `hostname` or `hn` | `string` | WLED IP | - | ✅
-| `width` or `w` | `number` | Resize image width | **16** | ⬜️
-| `height` or `h` | `number` | Resize image height | **16** | ⬜️
-| `device` or `d` | `string` | Device name, mandatory if the output is "ha" | - | ⬜️
-| `unique_id` or `uid` | `string` | Unique device id, required if output is "ha" | - | ⬜️
-| `friendly_name` or `fn` | `string` | Friendly name of the device, mandatory if the output is "ha" | - | ⬜️
-| `color` or `c` | `string` | If the image contains a transparent background, you can change it to a desired color by passing the color in the HEX pattern | - | ⬜️
-| `animation` or `anim` | `boolean` | If true, it will return the WLED JSON according to the number of frames in the GIF image. | **false** | ⬜️
-| `amount` or `amt` | `number` | Number of frames contained in the GIF image, if the **animation** parameter is **true** | **0** | ⬜️
-| `delay` or `dl` | `number` | Delay seconds between executions **curl**, optional and only for **output** curl | **2** | ⬜️
-| `name` or `n` | `string` | Name of the preset to be saved | - | ⬜️
-| `psave` or `ps` | `number` | Preset id to be saved | - | ⬜️
-| `image` | `string` | Image that will be converted to JSON WLED, required only if using the **inpxmagic** version | - | ⬜️
-| `file` | `boolean` | If true, it will download the file according to the output, required only if using the **inpxmagic** version | **false** | ⬜️
-| `simulate` | `boolean` | If true and output is "json" then simulate JSON WLED, required only if using the **inpxmagic** version | **false** | ⬜️
+See the API documentation in the original repository for full parameter details.
+
+---
+
+**Enjoying this integration? Give it a ⭐ on [GitHub](https://github.com/iamjoshk/PixelMagicTool)!**
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
