@@ -74,7 +74,7 @@ def compress_colors(colors: list[int], level: int) -> list[int]:
     Returns:
         Compressed list of colors
     """
-    if not level or level == 0 or not colors:
+    if level <= 0 or not colors:
         return colors
     
     # Level 1 = 98 threshold (gentlest), Level 10 = 75 threshold (more aggressive)
@@ -201,7 +201,6 @@ class PixelMagicToolAPI:
                 
                 # Parse the JSON if it's a JSON output
                 if output == "json":
-                    import json
                     result = json.loads(result_text)
                     return result
                 else:
@@ -301,7 +300,6 @@ class PixelMagicToolAPI:
             url = f"http://{wled_host}/json/state"
             
             # Calculate payload size for logging
-            import json
             payload_size = len(json.dumps(wled_json))
             _LOGGER.debug("Sending to WLED at %s (payload size: %d bytes)", url, payload_size)
             
