@@ -1,6 +1,7 @@
 """API client for Pixel Magic Tool."""
 from __future__ import annotations
 
+import asyncio
 import copy
 import io
 import json
@@ -336,7 +337,7 @@ class PixelMagicToolAPI:
         timeout: int = 10,
         session: aiohttp.ClientSession | None = None,
         use_chunks: bool = False,
-        chunk_size: int = 512,
+        chunk_size: int = 256,
     ) -> bool:
         """
         Send WLED JSON to a WLED device.
@@ -347,7 +348,7 @@ class PixelMagicToolAPI:
             timeout: Request timeout in seconds
             session: Optional aiohttp session
             use_chunks: Split large payloads into multiple smaller requests
-            chunk_size: Number of LEDs per chunk when using chunked sending
+            chunk_size: Number of LEDs per chunk (WLED recommends 256)
             
         Returns:
             True if successful
@@ -456,9 +457,14 @@ class PixelMagicToolAPI:
         """
         Send WLED JSON in chunks by splitting LED data into multiple requests.
         
-        This splits the LED color data into smaller chunks and sends them sequentially
+        This splits the LED color data into smaller chunks and sends them sequentially,
         using the index pattern format, allowing WLED to handle larger total payloads 
         that would otherwise exceed its limits.
+        
+        According to WLED documentation: "To set a large number of colors, send multiple 
+        API calls of 256 colors at a time. Do not make several calls in parallel, that is 
+        not optimal for the device. Instead make your call in sequence, where each call 
+        waits for the previous to complete before making a new one."
         """
         url = f"http://{wled_host}/json/state"
         
@@ -562,6 +568,11 @@ class PixelMagicToolAPI:
                         _LOGGER.error("WLED returned success=false for chunk %d: %s", 
                                      chunk_idx + 1, response_data)
                         return False
+                    
+                    # Small delay between chunks to avoid overwhelming the device
+                    # WLED documentation recommends waiting for each call to complete before sending the next
+                    if chunk_idx < len(chunks) - 1:
+                        await asyncio.sleep(0.1)  # 100ms delay between chunks
             
             _LOGGER.info("Successfully sent all %d chunks to WLED device", len(chunks))
             return True

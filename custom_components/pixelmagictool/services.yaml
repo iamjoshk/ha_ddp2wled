@@ -199,14 +199,14 @@ send_to_wled:
           mode: slider
     use_chunks:
       name: Use Chunked Sending
-      description: Split large payloads into multiple smaller requests (helpful for very large images that exceed WLED's limits)
+      description: Split large payloads into multiple smaller requests sent sequentially (helpful for very large images that exceed WLED's limits)
       default: false
       selector:
         boolean:
     chunk_size:
       name: Chunk Size
-      description: Number of LEDs per chunk when using chunked sending (smaller values = more requests but better compatibility)
-      default: 512
+      description: Number of LEDs per chunk when using chunked sending (WLED recommends 256 colors per request)
+      default: 256
       selector:
         number:
           min: 64

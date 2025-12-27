@@ -147,7 +147,7 @@ automation:
           compression: true
           compression_level: 7
           use_chunks: true
-          chunk_size: 512
+          chunk_size: 256  # WLED recommended chunk size
 ```
 
 ### Example 4: Weather Icon Display
@@ -271,8 +271,8 @@ Same as `convert_image` plus:
 |-----------|----------|---------|-------------|
 | `wled_host` | Yes | - | IP address or hostname of WLED device |
 | `timeout` | No | 10 | Request timeout in seconds |
-| `use_chunks` | No | false | Split large payloads into multiple smaller requests |
-| `chunk_size` | No | 512 | Number of LEDs per chunk when using chunked sending |
+| `use_chunks` | No | false | Split large payloads into multiple sequential requests |
+| `chunk_size` | No | 256 | Number of LEDs per chunk (WLED recommends 256) |
 
 **Service Response:**
 Returns a dictionary containing:
@@ -329,11 +329,11 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
 - **Transparent Backgrounds**: Specify a color to replace transparency
 - **Compression**: Enable compression for large images to reduce payload size. Start with level 5 and adjust as needed.
-- **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially.
+- **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially. WLED documentation recommends sending chunks of 256 colors at a time, waiting for each request to complete before sending the next.
 - **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
   - Enable chunked sending with `use_chunks: true` (recommended for payloads > 15KB)
   - Enable compression with `compression: true` and adjust `compression_level` (1-10)
-  - Adjust `chunk_size` (default 512 LEDs) - smaller values = more requests but better compatibility
+  - Adjust `chunk_size` (default 256 LEDs per WLED recommendation) - smaller values = more requests but better compatibility
   - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
   - Try the "range" pattern type (most efficient)
   - Use the `convert_image` service to get the JSON, then use alternative upload methods if needed
@@ -426,7 +426,7 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 - **"Payload too large" or "413 Request Entity Too Large"**: The converted WLED JSON exceeds WLED's size limit (~20-30KB). Solutions:
   - **Enable chunked sending**: Set `use_chunks: true` (recommended for large images)
   - **Enable compression**: Set `compression: true` and adjust `compression_level`
-  - **Adjust chunk size**: Lower `chunk_size` value (default 512) if chunks are still too large
+  - **Adjust chunk size**: Lower `chunk_size` value (default 256 per WLED recommendation) if chunks are still too large
   - Reduce image dimensions (try 16x16 or 24x24)
   - Use the "range" pattern type (most efficient)
   - Combine multiple approaches (compression + chunking) for best results
