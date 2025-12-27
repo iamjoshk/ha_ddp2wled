@@ -30,7 +30,7 @@ DEFAULT_API_URL = "https://pixelmagictool.vercel.app/api/wled/image"
 DEFAULT_COMPRESSION = False
 DEFAULT_COMPRESSION_LEVEL = 5
 DEFAULT_USE_CHUNKS = False
-DEFAULT_CHUNK_SIZE = 512  # Number of LEDs per chunk
+DEFAULT_CHUNK_SIZE = 256  # Number of LEDs per chunk (WLED recommended)
 
 # Pattern types
 PATTERN_INDIVIDUAL = "individual"
