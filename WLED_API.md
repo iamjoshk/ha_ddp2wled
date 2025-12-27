@@ -310,7 +310,7 @@ curl http://192.168.1.100/json/state
    - Check network latency
 
 4. **No Visual Change / Preview Shows but Device Doesn't Update**
-   - **FIXED**: The integration now automatically sets the correct parameters (`fx=0`, `sel=true`, `liv=false`) to ensure device updates
+   - **FIXED**: The integration now automatically sets the correct parameters (`fx=0`, `sel=true`, `live=false`) to ensure device updates
    - If using older versions, verify segment is active
    - Check brightness isn't 0
    - Ensure LEDs are properly connected
