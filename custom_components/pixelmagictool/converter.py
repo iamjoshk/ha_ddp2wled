@@ -271,9 +271,6 @@ class PixelMagicToolAPI:
         except aiohttp.ClientError as err:
             _LOGGER.error("Network error calling Pixel Magic Tool API: %s", err)
             raise
-        except (json.JSONDecodeError, ValueError):
-            # These are already logged in the inner try-catch blocks
-            raise
         except Exception as err:
             _LOGGER.error("Error calling Pixel Magic Tool API: %s", err)
             raise
@@ -430,7 +427,9 @@ class PixelMagicToolAPI:
             # Parse JSON response with error handling
             try:
                 response_data = await response.json()
-            except aiohttp.ContentTypeError as json_err:
+            except (aiohttp.ContentTypeError, json.JSONDecodeError) as json_err:
+                # ContentTypeError: wrong content-type header
+                # JSONDecodeError: invalid JSON body
                 response_text = await response.text()
                 _LOGGER.error(
                     "Failed to parse WLED response as JSON: %s. Response text (first 200 chars): %s",
@@ -547,7 +546,9 @@ class PixelMagicToolAPI:
                     # Parse JSON response with error handling
                     try:
                         response_data = await response.json()
-                    except aiohttp.ContentTypeError as json_err:
+                    except (aiohttp.ContentTypeError, json.JSONDecodeError) as json_err:
+                        # ContentTypeError: wrong content-type header
+                        # JSONDecodeError: invalid JSON body
                         response_text = await response.text()
                         _LOGGER.error(
                             "Chunk %d: Failed to parse WLED response as JSON: %s. Response text (first 200 chars): %s",
