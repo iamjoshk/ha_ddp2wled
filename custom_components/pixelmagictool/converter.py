@@ -247,7 +247,21 @@ class PixelMagicToolAPI:
                 
                 # Parse the JSON if it's a JSON output
                 if output == "json":
-                    result = json.loads(result_text)
+                    # Check for empty or invalid response before parsing
+                    if not result_text or not result_text.strip():
+                        _LOGGER.error("Received empty response from API")
+                        raise ValueError("API returned empty response")
+                    
+                    try:
+                        result = json.loads(result_text)
+                    except json.JSONDecodeError as json_err:
+                        _LOGGER.error(
+                            "Failed to parse JSON response: %s. Response text (first 500 chars): %s",
+                            json_err,
+                            result_text[:500]
+                        )
+                        raise ValueError(f"Invalid JSON response from API: {json_err}") from json_err
+                    
                     # Ensure WLED JSON has the correct parameters for device update
                     result = self._ensure_wled_update_params(result)
                     return result
@@ -409,7 +423,20 @@ class PixelMagicToolAPI:
                 )
             
             response.raise_for_status()
-            response_data = await response.json()
+            
+            # Parse JSON response with error handling
+            try:
+                response_data = await response.json()
+            except (aiohttp.ContentTypeError, json.JSONDecodeError) as json_err:
+                # ContentTypeError: wrong content-type header
+                # JSONDecodeError: invalid JSON body
+                response_text = await response.text()
+                _LOGGER.error(
+                    "Failed to parse WLED response as JSON: %s. Response text (first 200 chars): %s",
+                    json_err,
+                    response_text[:200] if response_text else "(empty)"
+                )
+                raise ValueError(f"WLED returned invalid JSON response: {json_err}") from json_err
 
             if not response_data.get("success", False):
                 _LOGGER.error("WLED returned success=false: %s", response_data)
@@ -515,7 +542,21 @@ class PixelMagicToolAPI:
                         )
                     
                     response.raise_for_status()
-                    response_data = await response.json()
+                    
+                    # Parse JSON response with error handling
+                    try:
+                        response_data = await response.json()
+                    except (aiohttp.ContentTypeError, json.JSONDecodeError) as json_err:
+                        # ContentTypeError: wrong content-type header
+                        # JSONDecodeError: invalid JSON body
+                        response_text = await response.text()
+                        _LOGGER.error(
+                            "Chunk %d: Failed to parse WLED response as JSON: %s. Response text (first 200 chars): %s",
+                            chunk_idx + 1,
+                            json_err,
+                            response_text[:200] if response_text else "(empty)"
+                        )
+                        raise ValueError(f"WLED returned invalid JSON for chunk {chunk_idx + 1}: {json_err}") from json_err
                     
                     if not response_data.get("success", False):
                         _LOGGER.error("WLED returned success=false for chunk %d: %s", 

@@ -1340,7 +1340,14 @@
             return;
           }
           
-          const responseData = await response.json();
+          let responseData;
+          try {
+            responseData = await response.json();
+          } catch (jsonError) {
+            console.error("Failed to parse WLED response as JSON:", jsonError);
+            toast(`WLED returned invalid response (not JSON)`, "error");
+            return;
+          }
           
           if (responseData.success) {
             toast("Successfully simulated preset");
@@ -2386,7 +2393,13 @@
             throw new Error(`Failed to send chunk ${i + 1}: ${response.status}`);
           }
           
-          const responseData = await response.json();
+          let responseData;
+          try {
+            responseData = await response.json();
+          } catch (jsonError) {
+            console.error(`Chunk ${i + 1}: Failed to parse WLED response as JSON:`, jsonError);
+            throw new Error(`Chunk ${i + 1} received invalid JSON response from WLED`);
+          }
           
           if (!responseData.success) {
             throw new Error(`Chunk ${i + 1} was rejected by WLED`);
