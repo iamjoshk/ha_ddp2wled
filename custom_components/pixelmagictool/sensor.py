@@ -49,14 +49,29 @@ class PixelMagicToolSensor(SensorEntity):
         self._segment_id: int | None = None
         self._brightness: int | None = None
         self._dimensions: str | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
         
         # Listen for conversion events
-        config_entry.async_on_unload(
+        self.async_on_remove(
             self.hass.bus.async_listen(
                 f"{DOMAIN}_conversion_complete",
                 self._handle_conversion_complete,
             )
         )
+
+    @property
+    def device_info(self):
+        """Return device information about this entity."""
+        return {
+            "identifiers": {(DOMAIN, self._config_entry.entry_id)},
+            "name": self._config_entry.data.get("name", "Pixel Magic Tool"),
+            "manufacturer": "Pixel Magic Tool",
+            "model": "Image Converter",
+            "sw_version": "1.0.0",
+        }
 
     @property
     def state(self) -> str:
