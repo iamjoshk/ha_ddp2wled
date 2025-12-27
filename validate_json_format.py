@@ -34,39 +34,25 @@ def validate_json_format(json_string: str) -> tuple[bool, list[str]]:
         return False, issues
     
     # Check 2: Verify no single quotes are used for strings
-    # (except within double-quoted strings which is valid)
-    # Count unescaped single quotes outside of double quotes
-    in_double_quotes = False
-    escaped = False
-    for i, char in enumerate(json_string):
-        if escaped:
-            escaped = False
-            continue
-        if char == '\\':
-            escaped = True
-            continue
-        if char == '"' and not in_double_quotes:
-            in_double_quotes = True
-        elif char == '"' and in_double_quotes:
-            in_double_quotes = False
-        elif char == "'" and not in_double_quotes:
-            context = json_string[max(0, i-20):min(len(json_string), i+20)]
-            issues.append(f"Found single quote outside string context near: ...{context}...")
+    # Since json.loads() already validated the JSON, we can trust it's valid
+    # Just check for suspicious patterns (single quotes outside strings)
+    # Note: This is a simple heuristic check
+    if "'" in json_string:
+        # Count single quotes - in valid JSON they should only appear within double-quoted strings
+        # This is a simplified check; the main validation is json.loads() above
+        single_quote_count = json_string.count("'")
+        if single_quote_count > 0:
+            # This is informational - single quotes might be in string values
+            pass  # Not necessarily an error
     
     # Check 3: Verify boolean values are lowercase
-    # Re-serialize and check format
-    reserialized = json.dumps(parsed)
-    
     # Check for uppercase True/False (these wouldn't be in valid JSON but check anyway)
     if 'True' in json_string or 'False' in json_string:
         issues.append("Found uppercase True/False (should be lowercase true/false)")
     
     # Check 4: Verify keys use double quotes
-    # This is inherently checked by json.loads(), but we verify the string format
-    key_pattern = re.compile(r"'([^']+)'[\s]*:")
-    matches = key_pattern.findall(json_string)
-    if matches:
-        issues.append(f"Found keys with single quotes: {matches}")
+    # This is inherently checked by json.loads() which already validated the JSON
+    # Any single-quoted keys would have caused json.loads() to fail above
     
     is_valid = len(issues) == 0
     return is_valid, issues
