@@ -75,6 +75,8 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 
 **👉 See [EXAMPLES.md](EXAMPLES.md) for complete automation examples!**
 
+**👉 See [JSON_FORMAT.md](JSON_FORMAT.md) for JSON format specifications and validation!**
+
 ## Usage Examples
 
 ### Example 1: Display Spotify Album Art
