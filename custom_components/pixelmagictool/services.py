@@ -10,6 +10,7 @@ import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv, template
+from homeassistant.helpers.service import SupportsResponse
 
 from .const import (
     CONF_BRIGHTNESS,
@@ -61,7 +62,7 @@ SEND_TO_WLED_SCHEMA = CONVERT_IMAGE_SCHEMA.extend(
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for Pixel Magic Tool."""
 
-    async def handle_convert_image(call: ServiceCall) -> None:
+    async def handle_convert_image(call: ServiceCall) -> dict[str, Any]:
         """Handle the convert_image service call."""
         try:
             # Render template if needed
@@ -90,20 +91,31 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
             _LOGGER.info("Image conversion successful")
 
-            # Fire event with the result so the sensor can pick it up
+            # Fire lightweight event for sensor (without large result data)
             hass.bus.async_fire(
                 f"{DOMAIN}_conversion_complete",
                 {
                     "image_url": image_url,
-                    "result": result,
+                    "segment_id": call.data[CONF_SEGMENT_ID],
+                    "brightness": call.data[CONF_BRIGHTNESS],
+                    "pattern": call.data[CONF_PATTERN],
                 },
             )
+            
+            # Return result as service response
+            return {
+                "image_url": image_url,
+                "wled_json": result,
+                "segment_id": call.data[CONF_SEGMENT_ID],
+                "brightness": call.data[CONF_BRIGHTNESS],
+                "pattern": call.data[CONF_PATTERN],
+            }
 
         except Exception as err:
             _LOGGER.error("Error converting image: %s", err)
             raise
 
-    async def handle_send_to_wled(call: ServiceCall) -> None:
+    async def handle_send_to_wled(call: ServiceCall) -> dict[str, Any]:
         """Handle the send_to_wled service call."""
         try:
             # Render template if needed
@@ -133,12 +145,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 transparent_color=call.data.get(CONF_TRANSPARENT_COLOR),
             )
 
-            # Fire event with the result so the sensor can pick it up
+            # Fire lightweight event for sensor (without large result data)
             hass.bus.async_fire(
                 f"{DOMAIN}_conversion_complete",
                 {
                     "image_url": image_url,
-                    "result": result,
+                    "segment_id": call.data[CONF_SEGMENT_ID],
+                    "brightness": call.data[CONF_BRIGHTNESS],
+                    "pattern": call.data[CONF_PATTERN],
                 },
             )
 
@@ -161,8 +175,25 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         "segment_id": call.data[CONF_SEGMENT_ID],
                     },
                 )
+                
+                # Return result as service response
+                return {
+                    "success": True,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "wled_json": result,
+                    "segment_id": call.data[CONF_SEGMENT_ID],
+                    "brightness": call.data[CONF_BRIGHTNESS],
+                    "pattern": call.data[CONF_PATTERN],
+                }
             else:
                 _LOGGER.error("Failed to send to WLED")
+                return {
+                    "success": False,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "error": "Failed to send to WLED",
+                }
 
         except aiohttp.ClientError as err:
             _LOGGER.error("Network error sending to WLED: %s", err)
@@ -177,6 +208,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_CONVERT_IMAGE,
         handle_convert_image,
         schema=CONVERT_IMAGE_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -184,6 +216,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SEND_TO_WLED,
         handle_send_to_wled,
         schema=SEND_TO_WLED_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
     _LOGGER.info("Pixel Magic Tool services registered")

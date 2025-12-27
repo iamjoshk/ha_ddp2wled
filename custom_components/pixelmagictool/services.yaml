@@ -1,6 +1,8 @@
 convert_image:
   name: Convert Image
-  description: Convert an image from a URL to WLED format using the Pixel Magic Tool API
+  description: Convert an image from a URL to WLED format using the Pixel Magic Tool API. Returns the converted WLED JSON as a service response.
+  response:
+    optional: true
   fields:
     image_url:
       name: Image URL
@@ -75,7 +77,9 @@ convert_image:
 
 send_to_wled:
   name: Send to WLED
-  description: Convert an image and send it directly to a WLED device
+  description: Convert an image and send it directly to a WLED device. Returns the result status and WLED JSON as a service response.
+  response:
+    optional: true
   fields:
     image_url:
       name: Image URL
