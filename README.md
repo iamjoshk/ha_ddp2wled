@@ -119,7 +119,34 @@ automation:
           compression_level: 5
 ```
 
-### Example 3: Weather Icon Display
+### Example 3: Large Images with Chunked Sending
+
+For very large images (e.g., 64x64 or larger), use chunked sending to split the payload:
+
+```yaml
+automation:
+  - alias: "Update WLED with Large Album Art"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          wled_host: "192.168.1.100"
+          width: 64
+          height: 64
+          brightness: 128
+          pattern: "range"
+          segment_id: 0
+          compression: true
+          compression_level: 7
+          use_chunks: true
+          chunk_size: 512
+```
+
+### Example 4: Weather Icon Display
 
 ```yaml
 automation:
@@ -137,7 +164,7 @@ automation:
           brightness: 200
 ```
 
-### Example 4: Use Service Response Data
+### Example 5: Use Service Response Data
 
 Services now return the converted WLED JSON as a response, which you can use in scripts:
 
@@ -183,7 +210,7 @@ automation:
           message: "Converted image with {{ result.wled_json.seg.i | length }} color values"
 ```
 
-### Example 5: Camera Snapshot
+### Example 6: Camera Snapshot
 
 ```yaml
 automation:
@@ -240,6 +267,8 @@ Same as `convert_image` plus:
 |-----------|----------|---------|-------------|
 | `wled_host` | Yes | - | IP address or hostname of WLED device |
 | `timeout` | No | 10 | Request timeout in seconds |
+| `use_chunks` | No | false | Split large payloads into multiple smaller requests |
+| `chunk_size` | No | 512 | Number of LEDs per chunk when using chunked sending |
 
 **Service Response:**
 Returns a dictionary containing:
@@ -274,6 +303,8 @@ The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 - 🔗 Works with any image URL including Home Assistant sensor attributes
 - 🤖 Perfect for automations with media players, weather, cameras, and more
 - 💾 Can convert-only or convert-and-send in one action
+- 🗜️ Compression support to reduce payload size
+- 📦 Chunked sending for very large images that exceed WLED's payload limits
 
 ## Pattern Types Explained
 
@@ -293,8 +324,11 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
 - **Transparent Backgrounds**: Specify a color to replace transparency
 - **Compression**: Enable compression for large images to reduce payload size. Start with level 5 and adjust as needed.
+- **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially.
 - **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+  - Enable chunked sending with `use_chunks: true` (recommended for payloads > 15KB)
   - Enable compression with `compression: true` and adjust `compression_level` (1-10)
+  - Adjust `chunk_size` (default 512 LEDs) - smaller values = more requests but better compatibility
   - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
   - Try the "range" pattern type (most efficient)
   - Use the `convert_image` service to get the JSON, then use alternative upload methods if needed
@@ -385,10 +419,12 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 - **"API error"**: The Pixel Magic Tool API at pixelmagictool.vercel.app may be unavailable
 - **"WLED connection failed"**: Verify WLED device IP/hostname and network connectivity
 - **"Payload too large" or "413 Request Entity Too Large"**: The converted WLED JSON exceeds WLED's size limit (~20-30KB). Solutions:
+  - **Enable chunked sending**: Set `use_chunks: true` (recommended for large images)
+  - **Enable compression**: Set `compression: true` and adjust `compression_level`
+  - **Adjust chunk size**: Lower `chunk_size` value (default 512) if chunks are still too large
   - Reduce image dimensions (try 16x16 or 24x24)
   - Use the "range" pattern type (most efficient)
-  - Use `convert_image` service only to get the JSON, then handle sending separately
-  - Consider using WLED's file upload feature for large images instead of JSON API
+  - Combine multiple approaches (compression + chunking) for best results
 
 ### Image Not Displaying Correctly on WLED
 
