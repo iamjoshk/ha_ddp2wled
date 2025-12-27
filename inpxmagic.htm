@@ -187,15 +187,26 @@
         const data = await response.text();
 
         if (!response.ok) {
-          const { issues } = JSON.parse(data);
+          // Check if response is empty or not valid JSON
+          if (!data || data.trim() === "") {
+            toast(`Error: Server returned empty response (HTTP ${response.status})`, "error");
+            return;
+          }
 
-          Object.entries(issues).forEach((issue) => {
-            const [error, message] = issue;
+          try {
+            const { issues } = JSON.parse(data);
 
-            if (error !== "_errors") {
-              toast(`Error: [${error}] ${message["_errors"]}`, "error");
-            }
-          });
+            Object.entries(issues).forEach((issue) => {
+              const [error, message] = issue;
+
+              if (error !== "_errors") {
+                toast(`Error: [${error}] ${message["_errors"]}`, "error");
+              }
+            });
+          } catch (parseError) {
+            // If JSON parsing fails, show the raw error text
+            toast(`Error: ${data.substring(0, 200)}`, "error");
+          }
 
           return;
         }
