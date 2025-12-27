@@ -1,0 +1,27 @@
+name: "Pixel Magic Tool"
+version: "1.0.0"
+slug: "pixelmagictool"
+description: "A tool that converts any image into code in JSON WLED format for 2D Matrix panels"
+url: "https://github.com/iamjoshk/PixelMagicTool"
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+init: false
+startup: application
+boot: auto
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: "Web interface"
+webui: "http://[HOST]:[PORT:8099]"
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:image-edit
+options:
+  log_level: info
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+image: "ghcr.io/{arch}-pixelmagictool"

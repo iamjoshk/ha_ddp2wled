@@ -1,0 +1,166 @@
+convert_image:
+  name: Convert Image
+  description: Convert an image from a URL to WLED format using the Pixel Magic Tool API
+  fields:
+    image_url:
+      name: Image URL
+      description: URL of the image to convert (can be a template that reads from sensor attributes)
+      required: true
+      example: "{{ states.sensor.album_art.attributes.entity_picture }}"
+      selector:
+        text:
+    width:
+      name: Width
+      description: Target width in pixels (optional, API will use default if not specified)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    height:
+      name: Height
+      description: Target height in pixels (optional, API will use default if not specified)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    brightness:
+      name: Brightness
+      description: LED brightness (0-255)
+      default: 128
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: slider
+    pattern:
+      name: Pattern
+      description: Output pattern format
+      default: range
+      selector:
+        select:
+          options:
+            - label: Individual
+              value: individual
+            - label: Index
+              value: index
+            - label: Range
+              value: range
+    segment_id:
+      name: Segment ID
+      description: WLED segment ID
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 32
+          mode: box
+    transparent_color:
+      name: Transparent Color
+      description: Hex color to use for transparent pixels (optional)
+      required: false
+      example: "00BFFF"
+      selector:
+        text:
+    api_url:
+      name: API URL
+      description: Pixel Magic Tool API endpoint
+      default: "https://pixelmagictool.vercel.app/api/wled/image"
+      required: false
+      selector:
+        text:
+
+send_to_wled:
+  name: Send to WLED
+  description: Convert an image and send it directly to a WLED device
+  fields:
+    image_url:
+      name: Image URL
+      description: URL of the image to convert (can be a template that reads from sensor attributes)
+      required: true
+      example: "{{ states.sensor.album_art.attributes.entity_picture }}"
+      selector:
+        text:
+    wled_host:
+      name: WLED Host
+      description: IP address or hostname of WLED device
+      required: true
+      example: "192.168.1.100"
+      selector:
+        text:
+    width:
+      name: Width
+      description: Target width in pixels (optional, API will use default if not specified)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    height:
+      name: Height
+      description: Target height in pixels (optional, API will use default if not specified)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    brightness:
+      name: Brightness
+      description: LED brightness (0-255)
+      default: 128
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: slider
+    pattern:
+      name: Pattern
+      description: Output pattern format
+      default: range
+      selector:
+        select:
+          options:
+            - label: Individual
+              value: individual
+            - label: Index
+              value: index
+            - label: Range
+              value: range
+    segment_id:
+      name: Segment ID
+      description: WLED segment ID
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 32
+          mode: box
+    transparent_color:
+      name: Transparent Color
+      description: Hex color to use for transparent pixels (optional)
+      required: false
+      example: "00BFFF"
+      selector:
+        text:
+    timeout:
+      name: Timeout
+      description: Request timeout in seconds
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          mode: box
+    api_url:
+      name: API URL
+      description: Pixel Magic Tool API endpoint
+      default: "https://pixelmagictool.vercel.app/api/wled/image"
+      required: false
+      selector:
+        text:
+

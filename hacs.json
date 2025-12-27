@@ -1,0 +1,6 @@
+{
+  "name": "Pixel Magic Tool",
+  "render_readme": true,
+  "homeassistant": "2023.3.0",
+  "hacs": "1.6.0"
+}
