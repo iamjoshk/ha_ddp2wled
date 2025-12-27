@@ -12,6 +12,7 @@ A Home Assistant custom integration that converts images to WLED JSON format for
 This integration provides **Home Assistant services** that can:
 - 🔄 Convert images from URLs (including sensor attributes) to WLED format
 - 📤 **Send converted images directly to WLED devices using the WLED JSON API** (`/json/state` endpoint)
+- ✅ **Automatically ensures device updates** (not just preview) by setting correct WLED parameters
 - 🎨 Work with album art from media players, weather icons, camera snapshots, and more
 - 🤖 Be called from automations, scripts, and Node-RED flows
 - 💾 Store conversions in a sensor for later reuse

@@ -61,12 +61,17 @@ This is WLED's primary JSON API endpoint for controlling device state.
 
 ## Example JSON Sent to WLED
 
+The integration sends JSON in this format (includes parameters for reliable device updates):
+
 ```json
 {
   "on": true,
   "bri": 128,
+  "liv": false,
   "seg": {
     "id": 0,
+    "fx": 0,
+    "sel": true,
     "i": [
       0, 5, "FF0000",
       6, 10, "00FF00",
@@ -79,7 +84,10 @@ This is WLED's primary JSON API endpoint for controlling device state.
 Where:
 - `on`: Turn WLED on/off
 - `bri`: Brightness (0-255)
+- `liv`: Live override (false = apply changes immediately to device)
 - `seg.id`: Segment ID
+- `seg.fx`: Effect ID (0 = Solid, required for individual LED control)
+- `seg.sel`: Mark segment as selected/active
 - `seg.i`: Individual LED color data (pattern-based)
 
 ## Using the Services
@@ -235,9 +243,21 @@ The Pixel Magic Tool integration uses these WLED JSON API features:
 | `seg.id` | int | Segment ID to update |
 | `seg.i` | array | Individual LED data |
 | `seg.col` | array | Color palette (optional) |
-| `seg.fx` | int | Effect ID |
+| `seg.fx` | int | Effect ID (0 = Solid, required for individual LED control) |
 | `seg.sx` | int | Effect speed |
 | `seg.ix` | int | Effect intensity |
+| `seg.sel` | boolean | Mark segment as selected/active |
+| `liv` | boolean | Live override mode |
+
+### Important Parameters for Device Updates
+
+The integration automatically includes these critical parameters to ensure the WLED device updates properly:
+
+- **`seg.fx: 0`** - Sets the effect to "Solid" mode, which is required for individual LED control. Without this, WLED may not display the custom pixel data.
+- **`seg.sel: true`** - Marks the segment as selected and active, ensuring WLED applies the changes to the physical LEDs.
+- **`liv: false`** - Disables live override mode, ensuring updates are applied immediately to the device rather than just showing in the preview.
+
+These parameters fix the common issue where JSON updates show in the WLED web UI preview but the actual device doesn't update.
 
 ## Pattern Formats Explained
 
@@ -289,11 +309,14 @@ curl http://192.168.1.100/json/state
    - Increase timeout parameter
    - Check network latency
 
-4. **No Visual Change**
-   - Verify segment is active
+4. **No Visual Change / Preview Shows but Device Doesn't Update**
+   - **FIXED**: The integration now automatically sets the correct parameters (`fx=0`, `sel=true`, `liv=false`) to ensure device updates
+   - If using older versions, verify segment is active
    - Check brightness isn't 0
    - Ensure LEDs are properly connected
    - Verify 2D matrix configuration in WLED
+   - Make sure WLED is not in live mode (now disabled automatically)
+   - Verify the segment effect is set to "Solid" (now set automatically)
 
 ### Debug Logging
 
