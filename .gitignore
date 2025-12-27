@@ -3,3 +3,6 @@ pixart.htm
 pixelart.htm
 dev-*
 github.htm
+__pycache__/
+*.pyc
+*.pyo
