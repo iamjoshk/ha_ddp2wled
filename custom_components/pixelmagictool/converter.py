@@ -381,8 +381,9 @@ class PixelMagicToolAPI:
         """
         Send WLED JSON in chunks by splitting LED data into multiple requests.
         
-        This splits the LED color data into smaller chunks and sends them sequentially,
-        allowing WLED to handle larger total payloads that would otherwise exceed its limits.
+        This splits the LED color data into smaller chunks and sends them sequentially
+        using the index pattern format, allowing WLED to handle larger total payloads 
+        that would otherwise exceed its limits.
         """
         url = f"http://{wled_host}/json/state"
         
@@ -424,11 +425,17 @@ class PixelMagicToolAPI:
             
             # Send each chunk sequentially
             for chunk_idx, (start_led, chunk) in enumerate(chunks):
+                # Build index pattern: [index, color, index, color, ...]
+                # This tells WLED exactly which LEDs to update
+                indexed_chunk = []
+                for offset, color in enumerate(chunk):
+                    indexed_chunk.append(start_led + offset)
+                    indexed_chunk.append(color)
+                
                 chunk_payload = {
                     "seg": {
                         "id": segment_id,
-                        "start": start_led,  # Tell WLED which LED to start at
-                        "i": chunk,
+                        "i": indexed_chunk,
                     }
                 }
                 
