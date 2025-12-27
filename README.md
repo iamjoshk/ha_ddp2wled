@@ -57,7 +57,7 @@ Once installed, the integration provides two services and a sensor:
 
 ### Services
 
-Both services support **service responses**, allowing you to retrieve the converted WLED JSON directly without storing it in the database:
+Both services support **service responses**, allowing you to retrieve the converted WLED JSON directly in your automations. The last conversion is also stored in the sensor for easy access:
 
 1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON and returns it as a service response
 2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device via the **WLED JSON API** (`http://[WLED-IP]/json/state`), also returns the conversion result
@@ -66,9 +66,10 @@ Both services support **service responses**, allowing you to retrieve the conver
 
 The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that tracks:
 - The last converted image URL
+- The WLED JSON from the last conversion (stored in `wled_json` attribute)
 - Segment ID, brightness, and dimensions used
 
-**Note:** The WLED JSON is no longer stored in sensor attributes to avoid database performance issues. Use service responses to access the conversion data (see examples below).
+**Note:** For very large images, the WLED JSON attribute may increase database size. Consider using compression or smaller image dimensions if database performance becomes a concern. Service responses are also available for accessing conversion data without storing it.
 
 **👉 See [WLED_API.md](WLED_API.md) for details on the WLED JSON API integration!**
 
@@ -286,11 +287,12 @@ Returns a dictionary containing:
 The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 
 - `last_image_url` - The URL of the last converted image
+- `wled_json` - The complete WLED JSON payload from the last conversion
 - `segment_id` - Segment ID used
 - `brightness` - Brightness level used
 - `dimensions` - Image dimensions (if available)
 
-**Note:** The `wled_json` attribute is no longer stored in the sensor to avoid database performance issues with large payloads. Use service responses to access the converted WLED JSON data.
+**Note:** For very large images, the `wled_json` attribute may increase database size. Consider using compression, smaller image dimensions, or service responses if database performance becomes a concern.
 
 ## Features
 

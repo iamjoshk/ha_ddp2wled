@@ -81,9 +81,11 @@ class PixelMagicToolSensor(SensorEntity):
         if self._last_image_url:
             attrs[ATTR_LAST_IMAGE_URL] = self._last_image_url
             
-        # Note: WLED JSON is no longer stored in sensor attributes to avoid database size issues
-        # Users should access the conversion result via service response data instead
-        # attrs[ATTR_WLED_JSON] is intentionally omitted
+        # Include WLED JSON in attributes as requested by user
+        # Note: For very large images, this may impact database size
+        # Consider using compression or smaller image dimensions if needed
+        if self._wled_json is not None:
+            attrs[ATTR_WLED_JSON] = self._wled_json
             
         if self._segment_id is not None:
             attrs[ATTR_SEGMENT_ID] = self._segment_id
@@ -105,9 +107,8 @@ class PixelMagicToolSensor(SensorEntity):
         self._segment_id = data.get("segment_id")
         self._brightness = data.get("brightness")
         
-        # Note: wled_json is no longer included in the event to avoid database size issues
-        # Users should access the conversion result via service response data instead
-        self._wled_json = None
+        # Store wled_json in sensor attributes as requested by user
+        self._wled_json = data.get("wled_json")
         self._state = "converted"
             
         self.async_write_ha_state()
