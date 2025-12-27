@@ -1,6 +1,7 @@
 """API client for Pixel Magic Tool."""
 from __future__ import annotations
 
+import copy
 import io
 import json
 import logging
@@ -114,6 +115,16 @@ class PixelMagicToolAPI:
         """Initialize the API client."""
         self.api_url = api_url
 
+    def _set_segment_update_params(self, segment: dict[str, Any]) -> None:
+        """
+        Set required parameters on a segment for device update.
+        
+        Args:
+            segment: The segment dictionary to modify in-place
+        """
+        segment["fx"] = 0  # Effect ID 0 = Solid (required for individual LED control)
+        segment["sel"] = True  # Mark segment as selected/active
+
     def _ensure_wled_update_params(self, wled_json: dict[str, Any]) -> dict[str, Any]:
         """
         Ensure WLED JSON has the correct parameters for device update.
@@ -130,21 +141,19 @@ class PixelMagicToolAPI:
         Returns:
             Modified WLED JSON with correct update parameters
         """
-        modified_json = wled_json.copy()
+        # Use deep copy to avoid modifying the original object
+        modified_json = copy.deepcopy(wled_json)
         
         # Ensure segment parameters for device update
         if "seg" in modified_json:
             # Handle both single segment (dict) and multiple segments (list)
             if isinstance(modified_json["seg"], dict):
-                # Single segment - modify in place
-                modified_json["seg"]["fx"] = 0  # Effect ID 0 = Solid (required for individual LED control)
-                modified_json["seg"]["sel"] = True  # Mark segment as selected/active
+                self._set_segment_update_params(modified_json["seg"])
             elif isinstance(modified_json["seg"], list):
                 # Multiple segments - modify each one
                 for segment in modified_json["seg"]:
                     if isinstance(segment, dict):
-                        segment["fx"] = 0
-                        segment["sel"] = True
+                        self._set_segment_update_params(segment)
         
         # Disable live override to ensure updates are applied immediately
         modified_json["liv"] = False
