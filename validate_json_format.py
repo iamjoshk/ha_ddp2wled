@@ -75,7 +75,7 @@ def test_wled_json_format():
             "fx": 0,
             "sel": True
         },
-        "liv": False
+        "live": False
     })
     
     print("Test 1: Correct WLED JSON format")

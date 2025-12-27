@@ -132,7 +132,7 @@ class PixelMagicToolAPI:
         This fixes the issue where JSON shows in WLED preview but device doesn't update.
         We need to:
         1. Set effect (fx) to 0 (Solid) for individual LED control
-        2. Disable live override (liv) so updates are applied immediately
+        2. Disable live mode (live) so updates are applied immediately
         3. Mark segment as selected (sel) to ensure it's active
         
         Args:
@@ -155,8 +155,8 @@ class PixelMagicToolAPI:
                     if isinstance(segment, dict):
                         self._set_segment_update_params(segment)
         
-        # Disable live override to ensure updates are applied immediately
-        modified_json["liv"] = False
+        # Disable live mode to ensure updates are applied immediately
+        modified_json["live"] = False
         
         return modified_json
 
@@ -514,7 +514,7 @@ class PixelMagicToolAPI:
                         "fx": 0,  # Effect ID 0 = Solid (required for individual LED control)
                         "sel": True,  # Mark segment as selected/active
                     },
-                    "liv": False,  # Disable live override to ensure updates are applied
+                    "live": False,  # Disable live mode to ensure updates are applied
                 }
                 
                 # Include other top-level settings only in the first chunk
