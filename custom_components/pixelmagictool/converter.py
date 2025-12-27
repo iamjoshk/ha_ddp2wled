@@ -273,6 +273,8 @@ class PixelMagicToolAPI:
         wled_json: dict[str, Any],
         timeout: int = 10,
         session: aiohttp.ClientSession | None = None,
+        use_chunks: bool = False,
+        chunk_size: int = 512,
     ) -> bool:
         """
         Send WLED JSON to a WLED device.
@@ -282,6 +284,8 @@ class PixelMagicToolAPI:
             wled_json: The WLED JSON payload
             timeout: Request timeout in seconds
             session: Optional aiohttp session
+            use_chunks: Split large payloads into multiple smaller requests
+            chunk_size: Number of LEDs per chunk when using chunked sending
             
         Returns:
             True if successful
@@ -297,62 +301,195 @@ class PixelMagicToolAPI:
             close_session = True
 
         try:
-            url = f"http://{wled_host}/json/state"
-            
             # Calculate payload size for logging
             payload_size = len(json.dumps(wled_json))
-            _LOGGER.debug("Sending to WLED at %s (payload size: %d bytes)", url, payload_size)
+            _LOGGER.debug("Sending to WLED at %s (payload size: %d bytes)", f"http://{wled_host}/json/state", payload_size)
             
-            # Warn if payload is large (WLED typically has issues with payloads > 20-30KB)
-            if payload_size > 20000:
-                _LOGGER.warning(
-                    "Large payload size (%d bytes) may exceed WLED limits. "
-                    "Consider using smaller images or lower resolution.",
-                    payload_size
+            # If chunked sending is enabled and payload is large, split it
+            if use_chunks and payload_size > 15000:  # 15KB threshold for chunking
+                _LOGGER.info("Using chunked sending due to large payload size (%d bytes)", payload_size)
+                return await self._send_to_wled_chunked(
+                    wled_host, wled_json, chunk_size, timeout, session
                 )
             
-            async with session.post(
-                url,
-                json=wled_json,
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                # Check for 413 Payload Too Large specifically
-                if response.status == 413:
-                    _LOGGER.error(
-                        "WLED rejected payload as too large (%d bytes). "
-                        "Try: 1) Reduce image dimensions, 2) Use a more efficient pattern type, "
-                        "3) Consider alternative WLED upload methods for large images.",
-                        payload_size
-                    )
-                    raise ValueError(
-                        f"Payload too large for WLED ({payload_size} bytes). "
-                        "Reduce image dimensions or use a more efficient pattern."
-                    )
-                
-                response.raise_for_status()
-                response_data = await response.json()
+            # Send as single request
+            return await self._send_to_wled_single(
+                wled_host, wled_json, timeout, session
+            )
 
-                if not response_data.get("success", False):
-                    _LOGGER.error("WLED returned success=false: %s", response_data)
-                    return False
-
-                _LOGGER.info("Successfully sent to WLED device")
-                return True
-
-        except aiohttp.ClientResponseError as err:
-            if err.status == 413:
-                # Already handled above, but catch here in case
-                raise ValueError(
-                    f"Payload too large for WLED. Try reducing image dimensions."
-                ) from err
-            _LOGGER.error("HTTP error sending to WLED: %s", err)
-            raise
-        except aiohttp.ClientError as err:
-            _LOGGER.error("Network error sending to WLED: %s", err)
-            raise
-        except Exception as err:
-            _LOGGER.error("Error sending to WLED: %s", err)
-            raise
         finally:
             if close_session:
                 await session.close()
+
+    async def _send_to_wled_single(
+        self,
+        wled_host: str,
+        wled_json: dict[str, Any],
+        timeout: int,
+        session: aiohttp.ClientSession,
+    ) -> bool:
+        """Send WLED JSON as a single request."""
+        url = f"http://{wled_host}/json/state"
+        
+        # Calculate payload size for logging
+        payload_size = len(json.dumps(wled_json))
+        
+        # Warn if payload is large (WLED typically has issues with payloads > 20-30KB)
+        if payload_size > 20000:
+            _LOGGER.warning(
+                "Large payload size (%d bytes) may exceed WLED limits. "
+                "Consider enabling use_chunks or using smaller images.",
+                payload_size
+            )
+        
+        async with session.post(
+            url,
+            json=wled_json,
+            headers={"Content-Type": "application/json"},
+        ) as response:
+            # Check for 413 Payload Too Large specifically
+            if response.status == 413:
+                _LOGGER.error(
+                    "WLED rejected payload as too large (%d bytes). "
+                    "Try: 1) Enable use_chunks, 2) Reduce image dimensions, "
+                    "3) Use a more efficient pattern type.",
+                    payload_size
+                )
+                raise ValueError(
+                    f"Payload too large for WLED ({payload_size} bytes). "
+                    "Enable use_chunks or reduce image dimensions."
+                )
+            
+            response.raise_for_status()
+            response_data = await response.json()
+
+            if not response_data.get("success", False):
+                _LOGGER.error("WLED returned success=false: %s", response_data)
+                return False
+
+            _LOGGER.info("Successfully sent to WLED device")
+            return True
+
+    async def _send_to_wled_chunked(
+        self,
+        wled_host: str,
+        wled_json: dict[str, Any],
+        chunk_size: int,
+        timeout: int,
+        session: aiohttp.ClientSession,
+    ) -> bool:
+        """
+        Send WLED JSON in chunks by splitting LED data into multiple requests.
+        
+        This splits the LED color data into smaller chunks and sends them sequentially,
+        allowing WLED to handle larger total payloads that would otherwise exceed its limits.
+        """
+        url = f"http://{wled_host}/json/state"
+        
+        # Extract segment data
+        if "seg" not in wled_json or "i" not in wled_json["seg"]:
+            _LOGGER.warning("No segment data to chunk, sending as single request")
+            return await self._send_to_wled_single(wled_host, wled_json, timeout, session)
+        
+        led_data = wled_json["seg"]["i"]
+        segment_id = wled_json["seg"].get("id", 0)
+        
+        # Calculate how many LEDs we have based on the pattern type
+        # For individual pattern: each entry is a color
+        # For range pattern: entries are [start, end, color, start, end, color, ...]
+        if isinstance(led_data, list) and len(led_data) > 0:
+            # Determine if this is a range pattern or individual pattern
+            is_range_pattern = False
+            if len(led_data) >= 3 and isinstance(led_data[0], int) and isinstance(led_data[1], int):
+                # Likely a range pattern
+                is_range_pattern = True
+            
+            if is_range_pattern:
+                # For range pattern, we need to expand it to individual colors first
+                led_colors = self._expand_range_pattern(led_data)
+            else:
+                # Individual pattern - already a simple list of colors
+                led_colors = led_data
+            
+            total_leds = len(led_colors)
+            _LOGGER.info("Chunking %d LEDs into chunks of %d", total_leds, chunk_size)
+            
+            # Split into chunks
+            chunks = []
+            for i in range(0, total_leds, chunk_size):
+                chunk = led_colors[i:i + chunk_size]
+                chunks.append((i, chunk))
+            
+            _LOGGER.info("Sending %d chunks to WLED", len(chunks))
+            
+            # Send each chunk sequentially
+            for chunk_idx, (start_led, chunk) in enumerate(chunks):
+                chunk_payload = {
+                    "seg": {
+                        "id": segment_id,
+                        "start": start_led,  # Tell WLED which LED to start at
+                        "i": chunk,
+                    }
+                }
+                
+                # Include other top-level settings only in the first chunk
+                if chunk_idx == 0:
+                    if "on" in wled_json:
+                        chunk_payload["on"] = wled_json["on"]
+                    if "bri" in wled_json:
+                        chunk_payload["bri"] = wled_json["bri"]
+                
+                _LOGGER.debug("Sending chunk %d/%d (LEDs %d-%d)", 
+                             chunk_idx + 1, len(chunks), start_led, start_led + len(chunk) - 1)
+                
+                async with session.post(
+                    url,
+                    json=chunk_payload,
+                    headers={"Content-Type": "application/json"},
+                ) as response:
+                    if response.status == 413:
+                        _LOGGER.error(
+                            "Chunk %d still too large. Try reducing chunk_size.",
+                            chunk_idx + 1
+                        )
+                        raise ValueError(
+                            f"Chunk {chunk_idx + 1} too large. Reduce chunk_size parameter."
+                        )
+                    
+                    response.raise_for_status()
+                    response_data = await response.json()
+                    
+                    if not response_data.get("success", False):
+                        _LOGGER.error("WLED returned success=false for chunk %d: %s", 
+                                     chunk_idx + 1, response_data)
+                        return False
+            
+            _LOGGER.info("Successfully sent all %d chunks to WLED device", len(chunks))
+            return True
+        
+        # Fallback to single request if we can't parse the data
+        _LOGGER.warning("Could not parse LED data for chunking, sending as single request")
+        return await self._send_to_wled_single(wled_host, wled_json, timeout, session)
+    
+    def _expand_range_pattern(self, range_data: list) -> list:
+        """
+        Expand a WLED range pattern into individual LED colors.
+        
+        Range pattern format: [start, end, color, start, end, color, ...]
+        Returns: [color0, color1, color2, ...]
+        """
+        expanded = []
+        i = 0
+        
+        while i < len(range_data) - 2:
+            start = range_data[i]
+            end = range_data[i + 1]
+            color = range_data[i + 2]
+            
+            # Add color for each LED in the range
+            for _ in range(start, end + 1):
+                expanded.append(color)
+            
+            i += 3
+        
+        return expanded

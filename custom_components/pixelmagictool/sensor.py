@@ -43,15 +43,25 @@ class PixelMagicToolSensor(SensorEntity):
         """Initialize the sensor."""
         self._config_entry = config_entry
         self._attr_unique_id = f"{config_entry.entry_id}_last_conversion"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, config_entry.entry_id)},
+            "name": "Pixel Magic Tool",
+            "manufacturer": "Custom Integration",
+            "model": "Image to WLED Converter",
+        }
         self._state = "idle"
         self._last_image_url: str | None = None
         self._wled_json: dict | None = None
         self._segment_id: int | None = None
         self._brightness: int | None = None
         self._dimensions: str | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
         
         # Listen for conversion events
-        config_entry.async_on_unload(
+        self.async_on_remove(
             self.hass.bus.async_listen(
                 f"{DOMAIN}_conversion_complete",
                 self._handle_conversion_complete,

@@ -17,6 +17,8 @@ CONF_TRANSPARENT_COLOR = "transparent_color"
 CONF_API_URL = "api_url"
 CONF_COMPRESSION = "compression"
 CONF_COMPRESSION_LEVEL = "compression_level"
+CONF_USE_CHUNKS = "use_chunks"
+CONF_CHUNK_SIZE = "chunk_size"
 
 # Default values
 DEFAULT_SEGMENT_ID = 0
@@ -27,6 +29,8 @@ DEFAULT_PATTERN = "range"
 DEFAULT_API_URL = "https://pixelmagictool.vercel.app/api/wled/image"
 DEFAULT_COMPRESSION = False
 DEFAULT_COMPRESSION_LEVEL = 5
+DEFAULT_USE_CHUNKS = False
+DEFAULT_CHUNK_SIZE = 512  # Number of LEDs per chunk
 
 # Pattern types
 PATTERN_INDIVIDUAL = "individual"

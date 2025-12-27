@@ -23,6 +23,8 @@ from .const import (
     CONF_WLED_HOST,
     CONF_WIDTH,
     CONF_API_URL,
+    CONF_USE_CHUNKS,
+    CONF_CHUNK_SIZE,
     DEFAULT_BRIGHTNESS,
     DEFAULT_COMPRESSION,
     DEFAULT_COMPRESSION_LEVEL,
@@ -31,6 +33,8 @@ from .const import (
     DEFAULT_SEGMENT_ID,
     DEFAULT_WIDTH,
     DEFAULT_API_URL,
+    DEFAULT_USE_CHUNKS,
+    DEFAULT_CHUNK_SIZE,
     DOMAIN,
     PATTERNS,
     SERVICE_CONVERT_IMAGE,
@@ -63,6 +67,8 @@ SEND_TO_WLED_SCHEMA = CONVERT_IMAGE_SCHEMA.extend(
     {
         vol.Required(CONF_WLED_HOST): cv.string,
         vol.Optional("timeout", default=10): cv.positive_int,
+        vol.Optional(CONF_USE_CHUNKS, default=DEFAULT_USE_CHUNKS): cv.boolean,
+        vol.Optional(CONF_CHUNK_SIZE, default=DEFAULT_CHUNK_SIZE): cv.positive_int,
     }
 )
 
@@ -182,6 +188,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     wled_host=wled_host,
                     wled_json=result,
                     timeout=timeout_seconds,
+                    use_chunks=call.data.get(CONF_USE_CHUNKS, DEFAULT_USE_CHUNKS),
+                    chunk_size=call.data.get(CONF_CHUNK_SIZE, DEFAULT_CHUNK_SIZE),
                 )
             except ValueError as err:
                 # Payload too large error
