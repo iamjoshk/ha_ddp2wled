@@ -138,6 +138,10 @@ class PixelMagicToolAPI:
             
         Returns:
             True if successful
+            
+        Raises:
+            ValueError: If the payload is too large for WLED to handle
+            aiohttp.ClientError: For network errors
         """
         close_session = False
         if session is None:
@@ -148,13 +152,37 @@ class PixelMagicToolAPI:
         try:
             url = f"http://{wled_host}/json/state"
             
-            _LOGGER.debug("Sending to WLED at %s", url)
+            # Calculate payload size for logging
+            import json
+            payload_size = len(json.dumps(wled_json))
+            _LOGGER.debug("Sending to WLED at %s (payload size: %d bytes)", url, payload_size)
+            
+            # Warn if payload is large (WLED typically has issues with payloads > 20-30KB)
+            if payload_size > 20000:
+                _LOGGER.warning(
+                    "Large payload size (%d bytes) may exceed WLED limits. "
+                    "Consider using smaller images or lower resolution.",
+                    payload_size
+                )
             
             async with session.post(
                 url,
                 json=wled_json,
                 headers={"Content-Type": "application/json"},
             ) as response:
+                # Check for 413 Payload Too Large specifically
+                if response.status == 413:
+                    _LOGGER.error(
+                        "WLED rejected payload as too large (%d bytes). "
+                        "Try: 1) Reduce image dimensions, 2) Use a more efficient pattern type, "
+                        "3) Consider alternative WLED upload methods for large images.",
+                        payload_size
+                    )
+                    raise ValueError(
+                        f"Payload too large for WLED ({payload_size} bytes). "
+                        "Reduce image dimensions or use a more efficient pattern."
+                    )
+                
                 response.raise_for_status()
                 response_data = await response.json()
 
@@ -165,6 +193,14 @@ class PixelMagicToolAPI:
                 _LOGGER.info("Successfully sent to WLED device")
                 return True
 
+        except aiohttp.ClientResponseError as err:
+            if err.status == 413:
+                # Already handled above, but catch here in case
+                raise ValueError(
+                    f"Payload too large for WLED. Try reducing image dimensions."
+                ) from err
+            _LOGGER.error("HTTP error sending to WLED: %s", err)
+            raise
         except aiohttp.ClientError as err:
             _LOGGER.error("Network error sending to WLED: %s", err)
             raise

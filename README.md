@@ -56,15 +56,18 @@ Once installed, the integration provides two services and a sensor:
 
 ### Services
 
-1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON (stores in sensor)
-2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device via the **WLED JSON API** (`http://[WLED-IP]/json/state`)
+Both services support **service responses**, allowing you to retrieve the converted WLED JSON directly without storing it in the database:
+
+1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON and returns it as a service response
+2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device via the **WLED JSON API** (`http://[WLED-IP]/json/state`), also returns the conversion result
 
 ### Sensor
 
-The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that stores:
+The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that tracks:
 - The last converted image URL
-- The generated WLED JSON
 - Segment ID, brightness, and dimensions used
+
+**Note:** The WLED JSON is no longer stored in sensor attributes to avoid database performance issues. Use service responses to access the conversion data (see examples below).
 
 **👉 See [WLED_API.md](WLED_API.md) for details on the WLED JSON API integration!**
 
@@ -111,16 +114,14 @@ automation:
           brightness: 200
 ```
 
-### Example 3: Convert Only (Store in Sensor)
+### Example 3: Use Service Response Data
+
+Services now return the converted WLED JSON as a response, which you can use in scripts:
 
 ```yaml
-automation:
-  - alias: "Convert Image to Sensor"
-    trigger:
-      - platform: state
-        entity_id: sensor.doorbell_snapshot
-        attribute: url
-    action:
+script:
+  convert_and_store:
+    sequence:
       - service: pixelmagictool.convert_image
         data:
           image_url: "{{ state_attr('sensor.doorbell_snapshot', 'url') }}"
@@ -128,17 +129,35 @@ automation:
           height: 64
           brightness: 255
           segment_id: 1
-```
-
-Then use the sensor data in scripts:
-
-```yaml
-script:
-  send_stored_conversion:
-    sequence:
+        response_variable: conversion_result
+      
+      # Use the response data
       - service: rest_command.send_to_wled
         data:
-          payload: "{{ state_attr('sensor.pixel_magic_tool_last_conversion', 'wled_json') }}"
+          wled_host: "192.168.1.100"
+          payload: "{{ conversion_result.wled_json }}"
+```
+
+Or use it in automations:
+
+```yaml
+automation:
+  - alias: "Convert and Use Response"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.convert_image
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          width: 32
+          height: 32
+        response_variable: result
+      
+      - service: notify.persistent_notification
+        data:
+          message: "Converted image with {{ result.wled_json.seg.i | length }} color values"
 ```
 
 ### Example 4: Camera Snapshot
@@ -171,7 +190,7 @@ automation:
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `image_url` | Yes | - | URL of image (supports templates) |
+| `image_url` | Yes | - | URL of image (supports Jinja2 templates) |
 | `width` | No | API default (16) | Target width in pixels |
 | `height` | No | API default (16) | Target height in pixels |
 | `brightness` | No | 128 | LED brightness (0-255) |
@@ -179,6 +198,14 @@ automation:
 | `segment_id` | No | 0 | WLED segment ID |
 | `transparent_color` | No | - | Hex color for transparent pixels |
 | `api_url` | No | pixelmagictool.vercel.app | API endpoint |
+
+**Service Response:**
+Returns a dictionary containing:
+- `image_url` - The processed image URL
+- `wled_json` - The complete WLED JSON payload
+- `segment_id` - Segment ID used
+- `brightness` - Brightness level used
+- `pattern` - Pattern type used
 
 ### `pixelmagictool.send_to_wled`
 
@@ -189,20 +216,26 @@ Same as `convert_image` plus:
 | `wled_host` | Yes | - | IP address or hostname of WLED device |
 | `timeout` | No | 10 | Request timeout in seconds |
 
+**Service Response:**
+Returns a dictionary containing:
+- `success` - Boolean indicating if the send was successful
+- `image_url` - The processed image URL
+- `wled_host` - The WLED device host
+- `wled_json` - The complete WLED JSON payload
+- `segment_id` - Segment ID used
+- `brightness` - Brightness level used
+- `pattern` - Pattern type used
+
 ## Sensor Attributes
 
 The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 
 - `last_image_url` - The URL of the last converted image
-- `wled_json` - The complete WLED JSON payload (as string)
 - `segment_id` - Segment ID used
 - `brightness` - Brightness level used
 - `dimensions` - Image dimensions (if available)
 
-Access these in templates:
-```yaml
-{{ state_attr('sensor.pixel_magic_tool_last_conversion', 'wled_json') }}
-```
+**Note:** The `wled_json` attribute is no longer stored in the sensor to avoid database performance issues with large payloads. Use service responses to access the converted WLED JSON data.
 
 ## Features
 
@@ -228,12 +261,39 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 ## Tips for Best Results
 
 - **Image URLs**: Use full URLs or Home Assistant local URLs (`http://homeassistant.local:8123/...`)
+- **Jinja2 Templates**: The `image_url` parameter supports Jinja2 templates (e.g., `{{ state_attr('media_player.spotify', 'entity_picture') }}`)
+- **Service Responses**: Use `response_variable` to capture and use the converted WLED JSON in scripts and automations
 - **Dimensions**: Match your WLED segment configuration (e.g., 32x32, 64x32)
 - **Pattern Selection**: Use "Range" pattern for most efficient data transfer
 - **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
 - **Transparent Backgrounds**: Specify a color to replace transparency
+- **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+  - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
+  - Try the "range" pattern type (most efficient)
+  - Use the `convert_image` service to get the JSON, then use alternative upload methods if needed
 
 ## Advanced Usage
+
+### Using Service Responses
+
+The modern way to use the conversion data is via service responses:
+
+```yaml
+script:
+  convert_and_use:
+    sequence:
+      - service: pixelmagictool.convert_image
+        data:
+          image_url: "https://example.com/image.png"
+          width: 32
+          height: 32
+        response_variable: result
+      
+      # Now use result.wled_json in subsequent steps
+      - service: rest_command.custom_wled_send
+        data:
+          payload: "{{ result.wled_json }}"
+```
 
 ### Using with Node-RED
 
@@ -297,6 +357,11 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 - **"Image download failed"**: Check that the image URL is accessible from your Home Assistant instance
 - **"API error"**: The Pixel Magic Tool API at pixelmagictool.vercel.app may be unavailable
 - **"WLED connection failed"**: Verify WLED device IP/hostname and network connectivity
+- **"Payload too large" or "413 Request Entity Too Large"**: The converted WLED JSON exceeds WLED's size limit (~20-30KB). Solutions:
+  - Reduce image dimensions (try 16x16 or 24x24)
+  - Use the "range" pattern type (most efficient)
+  - Use `convert_image` service only to get the JSON, then handle sending separately
+  - Consider using WLED's file upload feature for large images instead of JSON API
 
 ### Image Not Displaying Correctly on WLED
 

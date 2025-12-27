@@ -157,11 +157,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             )
 
             # Send to WLED
-            success = await api.send_to_wled(
-                wled_host=wled_host,
-                wled_json=result,
-                timeout=timeout_seconds,
-            )
+            try:
+                success = await api.send_to_wled(
+                    wled_host=wled_host,
+                    wled_json=result,
+                    timeout=timeout_seconds,
+                )
+            except ValueError as err:
+                # Payload too large error
+                _LOGGER.error("Payload too large for WLED: %s", err)
+                return {
+                    "success": False,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "error": str(err),
+                    "wled_json": result,  # Still return the JSON in case user wants to handle it
+                }
 
             if success:
                 _LOGGER.info("Successfully sent image to WLED")
