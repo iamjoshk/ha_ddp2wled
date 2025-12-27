@@ -15,8 +15,8 @@ COPY run.sh /
 
 # Download latest files from Apollo Automation's PixelMagicTool repository
 RUN mkdir -p /usr/share/nginx/html && \
-    curl -L -o /usr/share/nginx/html/pxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/pxmagic.htm && \
-    curl -L -o /usr/share/nginx/html/inpxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/inpxmagic.htm
+    curl -fsSL -o /usr/share/nginx/html/pxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/pxmagic.htm && \
+    curl -fsSL -o /usr/share/nginx/html/inpxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/inpxmagic.htm
 
 # Create nginx configuration
 RUN echo 'server { \
