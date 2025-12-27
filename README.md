@@ -11,9 +11,10 @@ A Home Assistant custom integration that converts images to WLED JSON format for
 
 This integration provides **Home Assistant services** that can:
 - 🔄 Convert images from URLs (including sensor attributes) to WLED format
-- 📤 Send converted images directly to WLED devices
+- 📤 **Send converted images directly to WLED devices using the WLED JSON API** (`/json/state` endpoint)
 - 🎨 Work with album art from media players, weather icons, camera snapshots, and more
 - 🤖 Be called from automations, scripts, and Node-RED flows
+- 💾 Store conversions in a sensor for later reuse
 
 ## Use Cases
 
@@ -56,7 +57,7 @@ Once installed, the integration provides two services and a sensor:
 ### Services
 
 1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON (stores in sensor)
-2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device
+2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device via the **WLED JSON API** (`http://[WLED-IP]/json/state`)
 
 ### Sensor
 
@@ -64,6 +65,8 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 - The last converted image URL
 - The generated WLED JSON
 - Segment ID, brightness, and dimensions used
+
+**👉 See [WLED_API.md](WLED_API.md) for details on the WLED JSON API integration!**
 
 **👉 See [EXAMPLES.md](EXAMPLES.md) for complete automation examples!**
 
