@@ -114,6 +114,43 @@ class PixelMagicToolAPI:
         """Initialize the API client."""
         self.api_url = api_url
 
+    def _ensure_wled_update_params(self, wled_json: dict[str, Any]) -> dict[str, Any]:
+        """
+        Ensure WLED JSON has the correct parameters for device update.
+        
+        This fixes the issue where JSON shows in WLED preview but device doesn't update.
+        We need to:
+        1. Set effect (fx) to 0 (Solid) for individual LED control
+        2. Disable live override (liv) so updates are applied immediately
+        3. Mark segment as selected (sel) to ensure it's active
+        
+        Args:
+            wled_json: The WLED JSON payload from the API
+            
+        Returns:
+            Modified WLED JSON with correct update parameters
+        """
+        modified_json = wled_json.copy()
+        
+        # Ensure segment parameters for device update
+        if "seg" in modified_json:
+            # Handle both single segment (dict) and multiple segments (list)
+            if isinstance(modified_json["seg"], dict):
+                # Single segment - modify in place
+                modified_json["seg"]["fx"] = 0  # Effect ID 0 = Solid (required for individual LED control)
+                modified_json["seg"]["sel"] = True  # Mark segment as selected/active
+            elif isinstance(modified_json["seg"], list):
+                # Multiple segments - modify each one
+                for segment in modified_json["seg"]:
+                    if isinstance(segment, dict):
+                        segment["fx"] = 0
+                        segment["sel"] = True
+        
+        # Disable live override to ensure updates are applied immediately
+        modified_json["liv"] = False
+        
+        return modified_json
+
     async def convert_image(
         self,
         image_url: str,
@@ -202,6 +239,8 @@ class PixelMagicToolAPI:
                 # Parse the JSON if it's a JSON output
                 if output == "json":
                     result = json.loads(result_text)
+                    # Ensure WLED JSON has the correct parameters for device update
+                    result = self._ensure_wled_update_params(result)
                     return result
                 else:
                     return {"result": result_text}
@@ -436,7 +475,10 @@ class PixelMagicToolAPI:
                     "seg": {
                         "id": segment_id,
                         "i": indexed_chunk,
-                    }
+                        "fx": 0,  # Effect ID 0 = Solid (required for individual LED control)
+                        "sel": True,  # Mark segment as selected/active
+                    },
+                    "liv": False,  # Disable live override to ensure updates are applied
                 }
                 
                 # Include other top-level settings only in the first chunk
