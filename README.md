@@ -1,18 +1,114 @@
 ![PixelMagicTool](https://github.com/ajotanc/PixelMagicTool/assets/47322034/300b240b-40a3-4a9a-a6f0-925631919d9b)
 
-# Pixel Magic Tool
-It is a tool that converts any image into code in JSON WLED format, currently being tested on a 2D Matrix panel, soon I will post news for the serpentine version.
+# Pixel Magic Tool - Home Assistant Integration
 
-### Features
-- Converts any type of image
-- Option on tape address format
-- Result output option
-- Choice of brightness intensity
-- Convert transparent pixels to chosen color
-- Convert animated GIFs
-- Resize image
-- Select image direct from **[WLED-IP]/edit** or **upload**
-- Can save, simulate, copy or download generated code
+[![Home Assistant Integration](https://img.shields.io/badge/Home%20Assistant-Integration-blue.svg)](https://www.home-assistant.io/)
+[![HACS Compatible](https://img.shields.io/badge/HACS-Compatible-brightgreen.svg)](https://hacs.xyz/)
+
+A Home Assistant custom integration that converts images to WLED JSON format for HUB75 and 2D Matrix LED panels. Perfect for displaying album art, weather icons, or any dynamic images on your LED displays!
+
+## What This Does
+
+This integration provides **Home Assistant services** that can:
+- 🔄 Convert images from URLs (including sensor attributes) to WLED format
+- 📤 Send converted images directly to WLED devices
+- 🎨 Work with album art from media players, weather icons, camera snapshots, and more
+- 🤖 Be called from automations, scripts, and Node-RED flows
+
+## Use Cases
+
+- **Media Display**: Show album art from Spotify/Plex on your LED matrix
+- **Weather Icons**: Display current weather conditions as pixel art
+- **Notifications**: Show status icons for doorbell, alarm, etc.
+- **Dynamic Art**: Display images from sensors or external APIs
+- **Camera Feeds**: Convert camera snapshots to LED display
+
+## Installation
+
+### HACS (Recommended)
+
+1. Open HACS in your Home Assistant instance
+2. Click on "Integrations"
+3. Click the three dots in the top right corner
+4. Select "Custom repositories"
+5. Add this repository URL: `https://github.com/iamjoshk/PixelMagicTool`
+6. Select category: "Add-on"
+7. Click "Add"
+8. Find "Pixel Magic Tool" in the add-on store
+9. Click "Install"
+10. Start the add-on
+11. Access through the Home Assistant UI
+
+### Manual Installation
+
+1. Navigate to your Home Assistant's `/addons` directory
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/iamjoshk/PixelMagicTool.git
+   ```
+3. Restart Home Assistant
+4. Go to Supervisor → Add-on Store
+5. Refresh the page
+6. Find "Pixel Magic Tool" in the local add-ons section
+7. Click "Install"
+
+## Features
+
+- 🎨 Converts any type of image to WLED JSON format
+- 📋 Multiple output formats: WLED JSON, Home Assistant YAML, CURL commands
+- 🎭 Pattern selection (Individual, Index, Range)
+- 💡 Adjustable brightness control
+- 🎬 Convert animated GIFs with playlist support
+- 📐 Image resizing capabilities
+- 🌈 Convert transparent pixels to chosen color
+- 🗜️ Compression options for large images
+- 👁️ Live preview and simulation
+- 💾 Save directly to WLED, copy to clipboard, or download generated code
+- 🔗 Select images directly from **[WLED-IP]/edit** or upload local files
+
+## Usage
+
+### As a Home Assistant Add-on
+
+1. Open the Pixel Magic Tool add-on from your Home Assistant sidebar
+2. Enter your WLED device IP address or hostname
+3. Upload an image or select from WLED's storage
+4. Configure your preferences:
+   - Select segment and dimensions
+   - Choose output format
+   - Adjust brightness
+   - Enable compression if needed
+5. Click "Generate" to create the WLED code
+6. Use the generated output:
+   - Save directly to WLED
+   - Copy to clipboard
+   - Download as file
+   - Simulate on your device
+
+### Tips for Best Results
+
+- **Large Images**: Enable compression for images over 100x100 pixels
+- **Pattern Selection**: Use "Range" pattern for best data compression
+- **Testing**: Use the Simulate button before saving presets
+- **Image Management**: Access WLED's file manager at `http://[WLED-IP]/edit`
+
+### Animated GIFs
+
+The tool supports animated GIF conversion:
+
+1. Enable "Animation" toggle
+2. Upload or select a GIF
+3. Set frame count (0 = all frames)
+4. Configure duration and transition
+5. Generate and save as WLED playlist
+
+## Configuration
+
+The add-on has minimal configuration. See [DOCS.md](DOCS.md) for detailed documentation.
+
+```yaml
+log_level: info
+```
 
 ### Improvements and fixes
 ### (12/7/2025)
