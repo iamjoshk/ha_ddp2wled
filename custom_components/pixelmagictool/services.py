@@ -111,7 +111,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.info("Applying compression (level %d)", compression_level)
                 result = api.compress_wled_json(result, compression_level)
 
-            # Fire lightweight event for sensor (without large result data)
+            # Fire event for sensor with wled_json included
             hass.bus.async_fire(
                 f"{DOMAIN}_conversion_complete",
                 {
@@ -119,6 +119,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     "segment_id": call.data[CONF_SEGMENT_ID],
                     "brightness": call.data[CONF_BRIGHTNESS],
                     "pattern": call.data[CONF_PATTERN],
+                    "wled_json": result,
                 },
             )
             
@@ -171,7 +172,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.info("Applying compression (level %d)", compression_level)
                 result = api.compress_wled_json(result, compression_level)
 
-            # Fire lightweight event for sensor (without large result data)
+            # Fire event for sensor with wled_json included
             hass.bus.async_fire(
                 f"{DOMAIN}_conversion_complete",
                 {
@@ -179,6 +180,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     "segment_id": call.data[CONF_SEGMENT_ID],
                     "brightness": call.data[CONF_BRIGHTNESS],
                     "pattern": call.data[CONF_PATTERN],
+                    "wled_json": result,
                 },
             )
 
