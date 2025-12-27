@@ -63,7 +63,7 @@ class PixelMagicToolSensor(SensorEntity):
         )
 
     @property
-    def device_info(self):
+    def device_info(self) -> dict[str, Any]:
         """Return device information about this entity."""
         return {
             "identifiers": {(DOMAIN, self._config_entry.entry_id)},
