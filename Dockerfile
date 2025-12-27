@@ -4,16 +4,19 @@ FROM $BUILD_FROM
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install nginx and other required packages
+# Install nginx, curl, and other required packages
 RUN apk add --no-cache \
     nginx \
-    bash
+    bash \
+    curl
 
-# Copy add-on files
+# Copy run script
 COPY run.sh /
-COPY pxmagic.htm /usr/share/nginx/html/
-COPY inpxmagic.htm /usr/share/nginx/html/
-COPY images /usr/share/nginx/html/images/
+
+# Download latest files from Apollo Automation's PixelMagicTool repository
+RUN mkdir -p /usr/share/nginx/html && \
+    curl -L -o /usr/share/nginx/html/pxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/pxmagic.htm && \
+    curl -L -o /usr/share/nginx/html/inpxmagic.htm https://raw.githubusercontent.com/ApolloAutomation/PixelMagicTool/main/inpxmagic.htm
 
 # Create nginx configuration
 RUN echo 'server { \
