@@ -150,7 +150,33 @@ automation:
           chunk_size: 256  # WLED recommended chunk size
 ```
 
-### Example 4: Weather Icon Display
+### Example 4: Minimal Payload with Colors Only
+
+For applications where you want the smallest possible payload, use the `colors_only` parameter:
+
+```yaml
+automation:
+  - alias: "Update WLED with Album Art (Minimal Payload)"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.send_to_wled
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          wled_host: "192.168.1.100"
+          width: 32
+          height: 32
+          brightness: 128
+          pattern: "range"
+          segment_id: 0
+          colors_only: true  # Reduces payload size by removing metadata
+```
+
+**Note**: The `colors_only` parameter sends only the essential color data (`seg.i` and `seg.id`), reducing payload size by approximately 40-60 bytes. This is useful when every byte counts, though it omits some WLED parameters like `fx`, `sel`, `on`, `bri`, and `live`. WLED will use default or existing values for these fields.
+
+### Example 5: Weather Icon Display
 
 ```yaml
 automation:
@@ -168,7 +194,7 @@ automation:
           brightness: 200
 ```
 
-### Example 5: Use Service Response Data
+### Example 6: Use Service Response Data
 
 Services now return the converted WLED JSON as a response, which you can use in scripts:
 
@@ -214,7 +240,7 @@ automation:
           message: "Converted image with {{ result.wled_json.seg.i | length }} color values"
 ```
 
-### Example 6: Camera Snapshot
+### Example 7: Camera Snapshot
 
 ```yaml
 automation:
@@ -273,6 +299,7 @@ Same as `convert_image` plus:
 | `timeout` | No | 10 | Request timeout in seconds |
 | `use_chunks` | No | false | Split large payloads into multiple sequential requests |
 | `chunk_size` | No | 256 | Number of LEDs per chunk (WLED recommends 256) |
+| `colors_only` | No | false | Send minimal payload with only color data (reduces size by ~40-60 bytes) |
 
 **Service Response:**
 Returns a dictionary containing:
@@ -310,6 +337,7 @@ The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 - 💾 Can convert-only or convert-and-send in one action
 - 🗜️ Compression support to reduce payload size
 - 📦 Chunked sending for very large images that exceed WLED's payload limits
+- 🎯 Colors-only mode for minimal payload size (reduces overhead by ~40-60 bytes)
 
 ## Pattern Types Explained
 
@@ -329,8 +357,10 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Brightness**: Adjust based on ambient lighting (128 is a good starting point)
 - **Transparent Backgrounds**: Specify a color to replace transparency
 - **Compression**: Enable compression for large images to reduce payload size. Start with level 5 and adjust as needed.
+- **Colors-Only Mode**: Enable `colors_only: true` to send minimal payloads with just the color data, reducing overhead by ~40-60 bytes. This is useful when every byte counts, though it omits some WLED parameters (fx, sel, on, bri, live) and WLED will use default or existing values for these fields.
 - **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially. WLED documentation recommends sending chunks of 256 colors at a time, waiting for each request to complete before sending the next.
 - **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+  - Enable colors-only mode with `colors_only: true` (saves ~40-60 bytes overhead)
   - Enable chunked sending with `use_chunks: true` (recommended for payloads > 15KB)
   - Enable compression with `compression: true` and adjust `compression_level` (1-10)
   - Adjust `chunk_size` (default 256 LEDs per WLED recommendation) - smaller values = more requests but better compatibility

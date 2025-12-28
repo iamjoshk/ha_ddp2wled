@@ -212,4 +212,10 @@ send_to_wled:
           min: 64
           max: 2048
           mode: box
+    colors_only:
+      name: Colors Only Mode
+      description: Send minimal payload with only color data (seg.i and seg.id), reducing overhead by ~40-60 bytes. WLED will use default or existing values for other parameters (fx, sel, on, bri, live).
+      default: false
+      selector:
+        boolean:
 
