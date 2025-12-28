@@ -16,12 +16,12 @@ DDP_FLAGS_VER1 = 0x40  # Version 1
 DDP_FLAGS_PUSH = 0x01  # Push flag - data should be displayed immediately
 DDP_ID_BROADCAST = 0x00  # Broadcast to all devices
 DDP_ID_DEVICE = 0x01  # Single device
-DDP_TYPE_RGB24 = 0x00  # RGB data type (24-bit)
+DDP_TYPE_RGB24 = 0x0B  # RGB data type (24-bit) per DDP spec
 
 # Maximum bytes of pixel data in a single DDP packet
 # WLED recommends keeping packets under 1400 bytes to avoid fragmentation
-# Header is 10 bytes, so max RGB data is ~1390 bytes = ~463 pixels
-DDP_MAX_PIXELS_PER_PACKET = 463  # Conservative estimate
+# Header is 10 bytes, so max RGB data is ~1390 bytes = 480 pixels (upstream default)
+DDP_MAX_PIXELS_PER_PACKET = 480
 
 
 class DDPClient:
@@ -133,9 +133,8 @@ class DDPClient:
         - Byte 1: Sequence number
         - Byte 2: Data type (0 for RGB)
         - Byte 3: Destination ID
-        - Bytes 4-5: Data offset (big-endian)
-        - Bytes 6-7: Data length (big-endian)
-        - Bytes 8-9: Timecode/unused (WLED ignores this)
+        - Bytes 4-7: Data offset in bytes (big-endian, 32-bit)
+        - Bytes 8-9: Data length (big-endian)
         
         Args:
             flags: Flags byte (version + push flag)
@@ -148,21 +147,9 @@ class DDPClient:
         Returns:
             10-byte header as bytes
         """
-        # Pack header in big-endian format
-        # Format: >BBBBHHH
-        # B = unsigned char (1 byte) x4
-        # H = unsigned short (2 bytes) x3
-        header = struct.pack(
-            ">BBBBHHH",
-            flags,
-            sequence,
-            data_type,
-            dest_id,
-            data_offset,
-            data_length,
-            0,  # Timecode (unused by WLED)
-        )
-        return header
+        # Pack header in network (big-endian) format matching upstream WLEDVideoSync
+        # Format: !BBBBLH (10 bytes)
+        return struct.pack("!BBBBLH", flags, sequence, data_type, dest_id, data_offset, data_length)
 
     def _create_ddp_packet(
         self,
