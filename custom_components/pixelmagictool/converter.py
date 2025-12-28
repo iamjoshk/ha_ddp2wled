@@ -411,6 +411,8 @@ class PixelMagicToolAPI:
 
         try:
             # Create colors-only payload if requested
+            # Note: colors_only mode is compatible with chunked sending since both
+            # operations work on the same seg.i data structure
             if colors_only:
                 wled_json = self.create_colors_only_payload(wled_json)
             

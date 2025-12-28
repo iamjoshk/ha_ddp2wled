@@ -20,8 +20,8 @@ def main():
     api = PixelMagicToolAPI()
     
     # Example: 32x32 LED matrix (1024 pixels)
-    # Simulating a typical album art display
-    colors = ["FF0000"] * 256 + ["00FF00"] * 256 + ["0000FF"] * 256 + ["FFFF00"] * 256
+    # Simulating a typical album art display with 4 color zones
+    colors = ["FF0000"] * 256 + ["00FF00"] * 256 + ["0000FF"] * 256 + ["FFFF00"] * 256  # 1024 total pixels
     
     # Create full WLED payload (what gets sent normally)
     full_payload = {
