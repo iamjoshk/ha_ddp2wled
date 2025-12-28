@@ -23,6 +23,8 @@ Optional fields:
 - `brightness` (0-255, default 255)
 - `segment_id` (default 0)
 - `timeout` seconds (default 10)
+- `keepalive_seconds` (default 60) — keep re-sending the frame so WLED does not revert after its realtime timeout
+- `keepalive_interval` (default 1) — seconds between keepalive sends
 
 ### Example
 ```yaml

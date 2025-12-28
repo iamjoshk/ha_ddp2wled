@@ -8,6 +8,7 @@ import aiohttp
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.helpers import config_validation as cv, template
 from homeassistant.helpers.service import SupportsResponse
 
@@ -36,12 +37,20 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         ),
         vol.Optional("segment_id", default=0): cv.positive_int,
         vol.Optional("timeout", default=10): cv.positive_int,
+        vol.Optional("keepalive_seconds", default=60): vol.All(
+            vol.Coerce(float), vol.Range(min=0)
+        ),
+        vol.Optional("keepalive_interval", default=1): vol.All(
+            vol.Coerce(float), vol.Range(min=0.1)
+        ),
     }
 )
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for WLEDVideoSync."""
+
+    api = PixelMagicToolAPI()
 
     async def handle_send_to_wled_ddp(call: ServiceCall) -> dict[str, Any]:
         """Handle the send_to_wled_ddp service call."""
@@ -73,16 +82,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             height = call.data[CONF_HEIGHT]
             brightness = call.data[CONF_BRIGHTNESS]
             segment_id = call.data["segment_id"]
+            keepalive_seconds = call.data["keepalive_seconds"]
+            keepalive_interval = call.data["keepalive_interval"]
 
             _LOGGER.info(
                 "send_to_wled_ddp service called: host=%s, source_type=%s, "
-                "dimensions=%dx%d, brightness=%d, segment=%d",
-                wled_host, source_type, width, height, brightness, segment_id
+                "dimensions=%dx%d, brightness=%d, segment=%d, keepalive=%.1fs/%.2fs",
+                wled_host,
+                source_type,
+                width,
+                height,
+                brightness,
+                segment_id,
+                keepalive_seconds,
+                keepalive_interval,
             )
             _LOGGER.debug("Image source: %s", image_source)
-
-            # Create API client
-            api = PixelMagicToolAPI()
 
             # Send image via DDP
             try:
@@ -94,6 +109,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     brightness=brightness,
                     segment_id=segment_id,
                     timeout=timeout_seconds,
+                    keepalive_seconds=keepalive_seconds,
+                    keepalive_interval=keepalive_interval,
                 )
             except ValueError as err:
                 _LOGGER.error("Failed to process image: %s", err)
@@ -177,5 +194,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=SEND_TO_WLED_DDP_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
+
+    # Ensure background tasks are cleaned up when Home Assistant stops
+    async def _handle_shutdown(event) -> None:
+        await api.async_close()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _handle_shutdown)
 
     _LOGGER.info("WLEDVideoSync services registered")
