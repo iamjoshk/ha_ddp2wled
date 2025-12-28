@@ -245,7 +245,7 @@ class DDPClient:
         # Prepare WLED device via HTTP API to ensure DDP data persists
         if prepare_device:
             _LOGGER.debug("Preparing WLED device before sending DDP packets")
-            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=5)
+            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
             if not prep_success:
                 _LOGGER.warning(
                     "Failed to prepare WLED device, continuing with DDP send anyway"
@@ -345,7 +345,7 @@ class DDPClient:
         # Prepare WLED device via HTTP API to ensure DDP data persists
         if prepare_device:
             _LOGGER.debug("Preparing WLED device before sending DDP packets")
-            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=5)
+            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
             if not prep_success:
                 _LOGGER.warning(
                     "Failed to prepare WLED device, continuing with DDP send anyway"
