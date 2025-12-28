@@ -19,8 +19,9 @@ DDP_ID_DEVICE = 0x01  # Single device
 DDP_TYPE_RGB24 = 0x0B  # RGB data type (24-bit) per DDP spec
 
 # Maximum bytes of pixel data in a single DDP packet
-# WLED recommends keeping packets under 1400 bytes to avoid fragmentation
-# Header is 10 bytes, so max RGB data is ~1390 bytes = 480 pixels (upstream default)
+# Upstream WLEDVideoSync uses 480 pixels per packet (~1450 bytes total with header).
+# This matches upstream behavior but may exceed the ~1400-byte fragmentation guideline
+# on some networks.
 DDP_MAX_PIXELS_PER_PACKET = 480
 
 
@@ -80,8 +81,8 @@ class DDPClient:
         }
         
         _LOGGER.debug(
-            "Preparing WLED at %s for DDP streaming (segment %d)",
-            self.host, segment_id
+            "Preparing WLED at %s for DDP streaming (segment %d) via POST %s payload=%s timeout=%s",
+            self.host, segment_id, url, payload, timeout
         )
         
         try:
@@ -131,7 +132,7 @@ class DDPClient:
         The header is 10 bytes structured as follows:
         - Byte 0: Flags (version + push flag)
         - Byte 1: Sequence number
-        - Byte 2: Data type (0 for RGB)
+        - Byte 2: Data type (0x0B for RGB24)
         - Byte 3: Destination ID
         - Bytes 4-7: Data offset in bytes (big-endian, 32-bit)
         - Bytes 8-9: Data length (big-endian)
@@ -139,7 +140,7 @@ class DDPClient:
         Args:
             flags: Flags byte (version + push flag)
             sequence: Sequence number for packet ordering
-            data_type: Data type (0 for RGB24)
+            data_type: Data type (0x0B for RGB24)
             dest_id: Destination ID (0=broadcast, 1=device)
             data_offset: Byte offset in the display buffer
             data_length: Length of RGB data in bytes
@@ -257,7 +258,10 @@ class DDPClient:
             # Split data into packets if needed
             if total_pixels <= DDP_MAX_PIXELS_PER_PACKET:
                 # Single packet - send entire image at once
-                _LOGGER.debug("Sending single DDP packet")
+                _LOGGER.debug(
+                    "Sending single DDP packet to %s:%d (seq=0 offset=0 bytes=%d push=True)",
+                    self.host, self.port, len(rgb_data)
+                )
                 packet = self._create_ddp_packet(rgb_data, offset=0, sequence=0, push=True)
                 sock.sendto(packet, (self.host, self.port))
             else:
@@ -286,8 +290,17 @@ class DDPClient:
                     )
                     
                     _LOGGER.debug(
-                        "Sending packet %d/%d (pixels %d-%d, %d bytes)",
-                        packet_idx + 1, num_packets, start_pixel, end_pixel - 1, len(packet_data)
+                        "Sending packet %d/%d to %s:%d (seq=%d offset=%d pixels %d-%d bytes=%d push=%s)",
+                        packet_idx + 1,
+                        num_packets,
+                        self.host,
+                        self.port,
+                        packet_idx,
+                        start_pixel * 3,
+                        start_pixel,
+                        end_pixel - 1,
+                        len(packet_data),
+                        push,
                     )
                     
                     sock.sendto(packet, (self.host, self.port))
