@@ -107,7 +107,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             brightness = call.data[CONF_BRIGHTNESS]
             segment_id = call.data["segment_id"]
 
-            _LOGGER.info("Sending image to WLED via DDP at %s (source: %s)", wled_host, source_type)
+            _LOGGER.info(
+                "send_to_wled_ddp service called: host=%s, source_type=%s, "
+                "dimensions=%dx%d, brightness=%d, segment=%d",
+                wled_host, source_type, width, height, brightness, segment_id
+            )
+            _LOGGER.debug("Image source: %s", image_source)
 
             # Create API client
             api = PixelMagicToolAPI()

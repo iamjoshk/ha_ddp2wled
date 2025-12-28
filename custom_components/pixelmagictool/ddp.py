@@ -216,7 +216,7 @@ class DDPClient:
         height: int,
         segment_id: int = 0,
         timeout: int = 10,
-        prepare_device: bool = True,
+        prepare_device: bool = False,
     ) -> bool:
         """
         Send an image to WLED via DDP protocol.
@@ -231,7 +231,9 @@ class DDPClient:
             height: Image height in pixels
             segment_id: WLED segment ID (default: 0)
             timeout: Socket timeout in seconds
-            prepare_device: Whether to prepare WLED via HTTP API before sending (default: True)
+            prepare_device: Whether to prepare WLED via HTTP API before sending (default: False).
+                          Set to True only if you need to explicitly set WLED state before DDP.
+                          Most users should leave this as False to match WLEDVideoSync behavior.
             
         Returns:
             True if successful
@@ -257,6 +259,11 @@ class DDPClient:
                 _LOGGER.warning(
                     "Failed to prepare WLED device, continuing with DDP send anyway"
                 )
+        else:
+            _LOGGER.debug(
+                "Skipping HTTP API preparation - sending DDP packets directly "
+                "(matching WLEDVideoSync web UI behavior)"
+            )
         
         _LOGGER.info(
             "Sending %dx%d image (%d pixels, %d bytes) via DDP to %s:%d",
@@ -327,7 +334,7 @@ class DDPClient:
         rgb_data: bytes,
         segment_id: int = 0,
         timeout: int = 10,
-        prepare_device: bool = True,
+        prepare_device: bool = False,
     ) -> bool:
         """
         Send raw RGB data to WLED via DDP protocol.
@@ -339,7 +346,9 @@ class DDPClient:
             rgb_data: RGB pixel data (R,G,B,R,G,B,...)
             segment_id: WLED segment ID (default: 0)
             timeout: Socket timeout in seconds
-            prepare_device: Whether to prepare WLED via HTTP API before sending (default: True)
+            prepare_device: Whether to prepare WLED via HTTP API before sending (default: False).
+                          Set to True only if you need to explicitly set WLED state before DDP.
+                          Most users should leave this as False to match WLEDVideoSync behavior.
             
         Returns:
             True if successful
@@ -357,6 +366,11 @@ class DDPClient:
                 _LOGGER.warning(
                     "Failed to prepare WLED device, continuing with DDP send anyway"
                 )
+        else:
+            _LOGGER.debug(
+                "Skipping HTTP API preparation - sending DDP packets directly "
+                "(matching WLEDVideoSync web UI behavior)"
+            )
         
         _LOGGER.info(
             "Sending %d pixels (%d bytes) via DDP to %s:%d",
@@ -416,7 +430,7 @@ class DDPClient:
         self,
         segment_id: int = 0,
         timeout: int = 10,
-        prepare_device: bool = True,
+        prepare_device: bool = False,
     ) -> bool:
         """
         Start a continuous streaming session to WLED.
@@ -427,7 +441,9 @@ class DDPClient:
         Args:
             segment_id: WLED segment ID (default: 0)
             timeout: Socket timeout in seconds
-            prepare_device: Whether to prepare WLED via HTTP API before streaming
+            prepare_device: Whether to prepare WLED via HTTP API before streaming (default: False).
+                          Set to True only if you need to explicitly set WLED state before DDP.
+                          Most users should leave this as False to match WLEDVideoSync behavior.
             
         Returns:
             True if streaming session started successfully
@@ -448,6 +464,11 @@ class DDPClient:
                     _LOGGER.warning(
                         "Failed to prepare WLED device, continuing with streaming anyway"
                     )
+            else:
+                _LOGGER.debug(
+                    "Skipping HTTP API preparation for streaming session "
+                    "(matching WLEDVideoSync web UI behavior)"
+                )
             
             # Open persistent UDP socket
             try:
