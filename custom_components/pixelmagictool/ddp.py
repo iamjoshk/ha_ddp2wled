@@ -131,8 +131,8 @@ class DDPClient:
         
         The header is 10 bytes structured as follows (network order, no padding):
         - Bytes 0-3: Flags, sequence, data type (0x0B), destination (1 byte each; total 4 bytes)
-        - Bytes 4-7: Data offset in bytes (big-endian, 32-bit)
-        - Bytes 8-9: Data length (big-endian, 16-bit; indexes 8 and 9)
+        - Bytes 4-7: Data offset in bytes (big-endian, 32-bit; total header bytes so far: 8)
+        - Bytes 8-9: Data length in bytes (big-endian, 16-bit; total header bytes: 10)
         
         Args:
             flags: Flags byte (version + push flag)
@@ -294,7 +294,7 @@ class DDPClient:
                         self.port,
                         packet_idx,
                         start_pixel,
-                        start_pixel * 3,
+                        start_byte,
                         start_pixel,
                         end_pixel - 1,
                         len(packet_data),
