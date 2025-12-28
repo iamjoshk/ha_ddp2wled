@@ -40,6 +40,13 @@ All notable changes to this project will be documented in this file.
   - Automatically sets `sel=true` to mark segment as active
   - Automatically sets `live=false` to disable live override mode
   - Applies to both single and chunked payload sending
+- **Fixed DDP realtime mode reversion issue** - LEDs no longer freeze/turn off and resume previous settings
+  - DDP now prepares WLED device before sending packets
+  - Sends HTTP API call to disable live override mode (`live: false`)
+  - Sets segment to Solid effect (`fx: 0`) for individual LED control
+  - Marks segment as selected/active (`sel: true`)
+  - Ensures DDP updates persist as actual LED state, not temporary realtime buffer
+  - Handles preparation failures gracefully (continues with DDP if HTTP call fails)
 - Improved stability for WLED-MM devices by using more conservative chunking defaults
 
 ### Migration Notes

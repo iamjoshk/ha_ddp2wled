@@ -215,6 +215,19 @@ You can verify DDP is working by:
 
 ## Troubleshooting
 
+### LEDs Turn Off/Freeze Then Resume Previous Settings (FIXED)
+
+**Issue**: When sending images via DDP, the LEDs briefly turn off or freeze, then return to their previous state instead of showing the new image.
+
+**Root Cause**: WLED enters temporary "realtime mode" when receiving DDP packets. When the packets stop, WLED exits realtime mode and reverts to the previous state. This is a safety feature to prevent stuck states if the controller crashes.
+
+**Solution**: This integration now automatically prepares the WLED device before sending DDP packets:
+1. Sends an HTTP API call to disable live override mode (`live: false`)
+2. Sets the segment to Solid effect (`fx: 0`) for individual LED control
+3. Marks the segment as selected/active (`sel: true`)
+
+This ensures that DDP updates persist as the actual LED state rather than a temporary realtime buffer. The fix is automatic - no configuration needed!
+
 ### Image Not Displaying
 
 1. **Check network connectivity**
