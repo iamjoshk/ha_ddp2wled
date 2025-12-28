@@ -10,7 +10,12 @@ from typing import Any
 import aiohttp
 from PIL import Image
 
-from .ddp import DDPClient
+try:
+    # Prefer package-relative import when available (Home Assistant)
+    from .ddp import DDPClient
+except ImportError:
+    # Fallback for direct module execution in standalone tests
+    from ddp import DDPClient
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -3,12 +3,15 @@ import asyncio
 import sys
 import os
 
+import pytest
+
 # Add the custom_components directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'custom_components', 'pixelmagictool'))
 
 from ddp import DDPClient
 
 
+@pytest.mark.asyncio
 async def test_streaming_session_lifecycle():
     """Test streaming session start, send, and stop."""
     print("Testing streaming session lifecycle...")
@@ -30,6 +33,7 @@ async def test_streaming_session_lifecycle():
     print("✓ Streaming session lifecycle test passed")
 
 
+@pytest.mark.asyncio
 async def test_streaming_state_management():
     """Test streaming state management."""
     print("\nTesting streaming state management...")
@@ -43,6 +47,7 @@ async def test_streaming_state_management():
     print("✓ Streaming state management test passed")
 
 
+@pytest.mark.asyncio
 async def test_send_frame_without_session():
     """Test that sending frame without starting session raises error."""
     print("\nTesting send_frame without active session...")
@@ -62,6 +67,7 @@ async def test_send_frame_without_session():
     print("✓ send_frame without session test passed")
 
 
+@pytest.mark.asyncio
 async def test_stop_streaming_without_session():
     """Test that stopping non-existent session returns False."""
     print("\nTesting stop_streaming without active session...")
@@ -75,6 +81,7 @@ async def test_stop_streaming_without_session():
     print("✓ stop_streaming without session test passed")
 
 
+@pytest.mark.asyncio
 async def test_session_initialization():
     """Test that DDPClient initializes with correct streaming state."""
     print("\nTesting session initialization...")
@@ -92,6 +99,7 @@ async def test_session_initialization():
     print("✓ Session initialization test passed")
 
 
+@pytest.mark.asyncio
 async def test_multiple_clients():
     """Test that multiple DDPClients can coexist."""
     print("\nTesting multiple DDPClient instances...")

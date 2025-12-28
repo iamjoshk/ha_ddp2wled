@@ -2,6 +2,10 @@
 
 # Pixel Magic Tool - Home Assistant Integration
 
+> **Note:** This fork has been reduced to a **DDP-only media sender** following the
+> WLEDVideoSync approach. All JSON/WLED API and sensor features have been removed.
+> See [README_NEW.md](README_NEW.md) for the current DDP-focused usage.
+
 [![Home Assistant Integration](https://img.shields.io/badge/Home%20Assistant-Integration-blue.svg)](https://www.home-assistant.io/)
 [![HACS Compatible](https://img.shields.io/badge/HACS-Compatible-brightgreen.svg)](https://hacs.xyz/)
 
