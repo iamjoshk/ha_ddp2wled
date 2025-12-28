@@ -780,13 +780,8 @@ class PixelMagicToolAPI:
         the specified dimensions, converts it to RGB24 format, and sends it via 
         DDP protocol.
         
-        Before sending DDP packets, this method prepares the WLED device by:
-        1. Disabling live override mode to ensure DDP updates persist
-        2. Setting the segment to Solid effect (fx=0) for individual LED control
-        3. Marking the segment as selected/active
-        
-        This prevents the issue where LEDs turn off/freeze and then resume
-        the previous setting after DDP packets stop.
+        This implementation follows the WLEDVideoSync approach of sending DDP packets
+        directly without any HTTP API preparation, which prevents display resets.
         
         Args:
             image_source: URL (http://, https://) or local file path of the image
@@ -811,39 +806,7 @@ class PixelMagicToolAPI:
             close_session = True
 
         try:
-            # Step 1: Prepare WLED device for DDP by disabling live mode
-            # This ensures DDP updates persist instead of reverting to previous state
-            wled_url = f"http://{wled_host}/json/state"
-            prepare_payload = {
-                "live": False,  # Disable live override mode
-                "seg": {
-                    "fx": 0,     # Set to Solid effect for individual LED control
-                    "sel": True  # Mark segment as selected/active
-                }
-            }
-            
-            _LOGGER.debug("Preparing WLED device for DDP: %s", wled_url)
-            try:
-                async with session.post(
-                    wled_url,
-                    json=prepare_payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=timeout),
-                ) as response:
-                    if response.status not in (200, 204):
-                        _LOGGER.warning(
-                            "WLED preparation returned status %d, continuing anyway",
-                            response.status
-                        )
-            except aiohttp.ClientError as err:
-                _LOGGER.warning(
-                    "Failed to prepare WLED device (non-fatal): %s. "
-                    "DDP may not persist properly.",
-                    err
-                )
-                # Continue anyway - DDP might still work
-
-            # Step 2: Load and validate image from URL or local file
+            # Load and validate image from URL or local file
             # The _load_image_data method handles downloading from URLs or reading 
             # from local files, and validates that the data is a valid image
             image_data = await self._load_image_data(image_source, session)
@@ -858,7 +821,7 @@ class PixelMagicToolAPI:
                 _LOGGER.error("Failed to open image for processing: %s", err)
                 raise ValueError(f"Failed to open image for processing: {err}") from err
 
-            # Step 3: Resize image to target dimensions
+            # Resize image to target dimensions
             _LOGGER.debug("Resizing image to %dx%d", width, height)
             img = img.resize((width, height), Image.Resampling.LANCZOS)
             
@@ -889,7 +852,7 @@ class PixelMagicToolAPI:
                 len(rgb_data), width, height
             )
             
-            # Step 4: Send processed image via DDP protocol
+            # Send processed image via DDP protocol
             ddp_client = DDPClient(wled_host)
             success = await ddp_client.send_image(rgb_data, width, height, timeout)
             
