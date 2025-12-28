@@ -268,6 +268,7 @@ class PixelMagicToolAPI:
                     async def _keepalive() -> None:
                         end_time = loop.time() + keepalive_seconds
                         sends = 0
+                        finished_normally = False
                         try:
                             while loop.time() < end_time:
                                 try:
@@ -288,10 +289,24 @@ class PixelMagicToolAPI:
                                 if remaining <= 0:
                                     break
                                 await asyncio.sleep(min(keepalive_interval, remaining))
+                            finished_normally = True
                         except asyncio.CancelledError:
                             _LOGGER.debug("DDP keepalive task cancelled")
                             raise
                         finally:
+                            if finished_normally:
+                                try:
+                                    await ddp_client.apply_frame_state(
+                                        rgb_data,
+                                        segment_id=segment_id,
+                                        timeout=timeout,
+                                    )
+                                    _LOGGER.debug("Persisted final DDP frame after keepalive window")
+                                except Exception as err:
+                                    _LOGGER.debug(
+                                        "Failed to persist final frame after keepalive: %s",
+                                        err,
+                                    )
                             _LOGGER.debug(
                                 "DDP keepalive finished after %d refreshes (%.1fs window)",
                                 sends,
@@ -315,6 +330,16 @@ class PixelMagicToolAPI:
                         keepalive_seconds,
                         keepalive_interval,
                     )
+                else:
+                    try:
+                        await ddp_client.apply_frame_state(
+                            rgb_data,
+                            segment_id=segment_id,
+                            timeout=timeout,
+                        )
+                        _LOGGER.debug("Persisted final DDP frame without keepalive")
+                    except Exception as err:
+                        _LOGGER.debug("Failed to persist final frame without keepalive: %s", err)
             else:
                 _LOGGER.error("Failed to send image via DDP to %s", wled_host)
             
