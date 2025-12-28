@@ -222,11 +222,14 @@ You can verify DDP is working by:
 **Root Cause**: WLED enters temporary "realtime mode" when receiving DDP packets. When the packets stop, WLED exits realtime mode and reverts to the previous state. This is a safety feature to prevent stuck states if the controller crashes.
 
 **Solution**: This integration now automatically prepares the WLED device before sending DDP packets:
-1. Sends an HTTP API call to disable live override mode (`live: false`)
-2. Sets the segment to Solid effect (`fx: 0`) for individual LED control
-3. Marks the segment as selected/active (`sel: true`)
+1. Sends an HTTP API call to disable live override mode (`lor: 0`, `live: false`)
+2. Turns the segment on (`on: true`)
+3. Sets the segment to Solid effect (`fx: 0`) for individual LED control
+4. Marks the segment as selected/active (`sel: true`)
 
 This ensures that DDP updates persist as the actual LED state rather than a temporary realtime buffer. The fix is automatic - no configuration needed!
+
+**What Changed**: The fix was implemented based on research into WLEDVideoSync and WLED's JSON API documentation. Before sending DDP packets, the integration now sends a POST request to `/json/state` with the proper configuration to prepare the device.
 
 ### Image Not Displaying
 

@@ -320,22 +320,28 @@ automation:
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `image_url` | Yes | - | URL of image (supports Jinja2 templates) |
+| `image_url` | Yes* | - | URL of image (supports Jinja2 templates) |
+| `image_path` | Yes* | - | Local file path (alternative to image_url) |
 | `wled_host` | Yes | - | IP address or hostname of WLED device |
 | `width` | Yes | - | Target width in pixels |
 | `height` | Yes | - | Target height in pixels |
 | `brightness` | No | 255 | LED brightness multiplier (0-255) |
+| `segment_id` | No | 0 | WLED segment ID to target |
 | `timeout` | No | 10 | Request timeout in seconds |
+
+*Either `image_url` or `image_path` must be provided, but not both.
 
 **Service Response:**
 Returns a dictionary containing:
 - `success` - Boolean indicating if the send was successful
-- `image_url` - The processed image URL
+- `image_source` - The processed image URL or path
+- `source_type` - Either "url" or "path"
 - `wled_host` - The WLED device host
 - `protocol` - Protocol used ("ddp")
 - `width` - Image width
 - `height` - Image height
 - `brightness` - Brightness level used
+- `segment_id` - WLED segment ID used
 
 **Benefits of DDP:**
 - ⚡ Faster than JSON API - direct UDP streaming
@@ -343,6 +349,7 @@ Returns a dictionary containing:
 - 💪 Better for real-time updates
 - 📦 Handles large matrices efficiently
 - 🔄 No payload size limits like JSON API
+- ✅ Automatic WLED preparation for persistent display
 
 ### `pixelmagictool.convert_image`
 
@@ -598,10 +605,13 @@ This issue has been fixed! The integration now automatically prepares WLED befor
 4. **Verify network**: Ensure UDP port 4048 is accessible: `nc -zvu <wled-ip> 4048`
 
 **The fix works by:**
-- Sending HTTP API call to disable live override mode before DDP packets
-- Setting the segment to Solid effect (fx=0) for individual LED control
-- Marking the segment as selected/active
+- Sending HTTP API call to disable live override mode (`lor: 0`, `live: false`) before DDP packets
+- Turning the segment on (`on: true`)
+- Setting the segment to Solid effect (`fx: 0`) for individual LED control
+- Marking the segment as selected/active (`sel: true`)
 - This ensures DDP updates persist instead of reverting to previous state
+
+**Configurable segment**: You can now specify which WLED segment to target using the `segment_id` parameter (default: 0).
 
 For more DDP troubleshooting, see [DDP_PROTOCOL.md](DDP_PROTOCOL.md).
 
