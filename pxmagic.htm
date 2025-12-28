@@ -1106,18 +1106,23 @@
                 );
               }
               
+              // Add timeout to detect if ESP32 freezes during save
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+              
               const options = {
                 method: "POST",
                 body: jsonBody,
                 headers: {
                   "Content-Type": "application/json"
                 },
-                // Add timeout to detect if ESP32 freezes during save
-                signal: AbortSignal.timeout(15000) // 15 second timeout
+                signal: controller.signal
               };
 
               try {
                 const response = await fetch(url, options);
+                
+                clearTimeout(timeoutId);
                 
                 if (!response.ok) {
                   const errorText = await response.text();
