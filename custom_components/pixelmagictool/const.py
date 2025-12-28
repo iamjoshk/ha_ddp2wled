@@ -19,6 +19,7 @@ CONF_COMPRESSION = "compression"
 CONF_COMPRESSION_LEVEL = "compression_level"
 CONF_USE_CHUNKS = "use_chunks"
 CONF_CHUNK_SIZE = "chunk_size"
+CONF_COLORS_ONLY = "colors_only"
 
 # Default values
 DEFAULT_SEGMENT_ID = 0
@@ -31,6 +32,7 @@ DEFAULT_COMPRESSION = False
 DEFAULT_COMPRESSION_LEVEL = 5
 DEFAULT_USE_CHUNKS = False
 DEFAULT_CHUNK_SIZE = 256  # Number of LEDs per chunk (WLED recommended)
+DEFAULT_COLORS_ONLY = False
 
 # Pattern types
 PATTERN_INDIVIDUAL = "individual"
