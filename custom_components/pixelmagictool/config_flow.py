@@ -1,4 +1,4 @@
-"""Config flow for Pixel Magic Tool integration."""
+"""Config flow for WLEDVideoSync integration."""
 from __future__ import annotations
 
 import logging
@@ -18,13 +18,13 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_NAME, default="Pixel Magic Tool"): cv.string,
+        vol.Required(CONF_NAME, default="WLEDVideoSync"): cv.string,
     }
 )
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Pixel Magic Tool."""
+    """Handle a config flow for WLEDVideoSync."""
 
     VERSION = 1
 

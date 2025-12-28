@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Pixel Magic Tool",
-        "description": "Set up the Pixel Magic Tool integration to convert images to WLED format.",
+        "title": "Set up WLEDVideoSync",
+        "description": "Set up the WLEDVideoSync integration to send images to WLED devices via DDP protocol.",
         "data": {
           "name": "Name"
         }
@@ -17,13 +17,9 @@
     }
   },
   "services": {
-    "convert_image": {
-      "name": "Convert Image",
-      "description": "Convert an image from a URL to WLED format"
-    },
-    "send_to_wled": {
-      "name": "Send to WLED",
-      "description": "Convert an image and send it directly to a WLED device"
+    "send_to_wled_ddp": {
+      "name": "Send to WLED via DDP",
+      "description": "Send an image directly to a WLED device using DDP protocol"
     }
   }
 }
