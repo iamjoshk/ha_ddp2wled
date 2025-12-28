@@ -129,13 +129,13 @@ class DDPClient:
         """
         Create a DDP packet header.
         
-        The header is 10 bytes structured as follows:
+        The header is 10 bytes structured as follows (total = 4 + 4 + 2):
         - Byte 0: Flags (version + push flag)
         - Byte 1: Sequence number
         - Byte 2: Data type (0x0B for RGB24)
         - Byte 3: Destination ID
         - Bytes 4-7: Data offset in bytes (big-endian, 32-bit)
-        - Bytes 8-9: Data length (big-endian)
+        - Bytes 8-9: Data length (big-endian, 16-bit)
         
         Args:
             flags: Flags byte (version + push flag)
@@ -149,7 +149,7 @@ class DDPClient:
             10-byte header as bytes
         """
         # Pack header in network (big-endian) format matching upstream WLEDVideoSync.
-        # Format: !BBBBLH (10 bytes total: 4xB + 1xL + 1xH)
+        # Format: !BBBBLH -> 4xB (1 byte each) + 1xL (4 bytes) + 1xH (2 bytes) = 10 bytes
         return struct.pack("!BBBBLH", flags, sequence, data_type, dest_id, data_offset, data_length)
 
     def _create_ddp_packet(
