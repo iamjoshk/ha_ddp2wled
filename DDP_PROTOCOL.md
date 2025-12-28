@@ -1,5 +1,7 @@
 # DDP Protocol Support
 
+> **💡 For common questions about DDP and connection requirements**, see the [FAQ](FAQ.md).
+
 ## Overview
 
 Pixel Magic Tool now supports the **DDP (Distributed Display Protocol)** for sending images to WLED devices. DDP is a UDP-based protocol designed specifically for real-time LED pixel streaming, offering significant advantages over the traditional JSON API approach.
