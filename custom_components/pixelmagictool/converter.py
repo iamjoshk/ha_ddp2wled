@@ -532,6 +532,7 @@ class PixelMagicToolAPI:
                 
                 _LOGGER.debug("Sending chunk %d/%d (LEDs %d-%d)", 
                              chunk_idx + 1, len(chunks), start_led, start_led + len(chunk) - 1)
+                _LOGGER.debug("Chunk %d JSON payload: %s", chunk_idx + 1, json.dumps(chunk_payload))
                 
                 async with session.post(
                     url,
