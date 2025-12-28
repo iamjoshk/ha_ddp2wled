@@ -35,5 +35,15 @@ data:
   brightness: 200
 ```
 
+## Reference: WLEDVideoSync upstream architecture
+This integration is derived from the upstream [zak-45/WLEDVideoSync](https://github.com/zak-45/WLEDVideoSync) project. The relevant pieces there include:
+- `src/net/ddp_queue.py`: `DDPDevice` handles UDP socket creation, queuing, retry logic, and packetizing RGB data into DDP-compliant packets.
+- `src/cst/media.py`: `CASTMedia` prepares and streams media sources (images, videos, USB cameras) to DDP devices, using queues to avoid latency and supporting previews.
+- `src/gui/videoplayer.py`: GUI helpers for uploading GIFs and wiring UI actions to the media/DDP sending backend.
+- `WLEDVideoSync.py`: Entry point that wires configuration, NiceGUI UI, and background tasks together.
+- `README`: Documents configuration such as FPS, scaling, and device IP settings for DDP targets.
+
+Overall flow: media sources are prepared by `CASTMedia`, packetized by `DDPDevice`, and streamed over DDP to WLED devices.
+
 ## License
 See [LICENSE](LICENSE).
