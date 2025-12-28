@@ -21,6 +21,8 @@ except ImportError as err:
 
 _LOGGER = logging.getLogger(__name__)
 
+MIN_KEEPALIVE_INTERVAL = 0.1
+
 
 class PixelMagicToolAPI:
     """Client for sending images to WLED via DDP protocol."""
@@ -33,7 +35,22 @@ class PixelMagicToolAPI:
             api_url: Ignored parameter kept for backwards compatibility.
                     This class only uses DDP protocol and doesn't need an API URL.
         """
-        pass
+        self._keepalive_task: asyncio.Task | None = None
+
+    async def async_close(self) -> None:
+        """Cancel any running keepalive task."""
+        await self._cancel_keepalive_task()
+
+    async def _cancel_keepalive_task(self) -> None:
+        """Cancel and await any running keepalive task."""
+        if self._keepalive_task and not self._keepalive_task.done():
+            self._keepalive_task.cancel()
+            _LOGGER.debug("Cancelled previous DDP keepalive task")
+            try:
+                await self._keepalive_task
+            except asyncio.CancelledError:
+                pass
+        self._keepalive_task = None
 
     def _validate_image_data(self, image_data: bytes, source: str) -> None:
         """
@@ -138,6 +155,8 @@ class PixelMagicToolAPI:
         segment_id: int = 0,
         timeout: int = 10,
         session: aiohttp.ClientSession | None = None,
+        keepalive_seconds: float = 60.0,
+        keepalive_interval: float = 1.0,
     ) -> bool:
         """
         Send an image to WLED via DDP protocol.
@@ -160,6 +179,9 @@ class PixelMagicToolAPI:
             segment_id: WLED segment ID (default: 0)
             timeout: Request timeout in seconds
             session: Optional aiohttp session (only used for URL downloads)
+            keepalive_seconds: How long to keep re-sending the frame to avoid
+                WLED reverting after its realtime timeout (0 disables keepalive)
+            keepalive_interval: Seconds between keepalive sends
             
         Returns:
             True if successful
@@ -235,6 +257,64 @@ class PixelMagicToolAPI:
             
             if success:
                 _LOGGER.info("Successfully sent image via DDP to %s", wled_host)
+
+                # Keep sending the frame periodically to avoid WLED reverting
+                # after the realtime timeout. This mirrors the upstream
+                # CASTMedia behavior of keeping the stream alive.
+                if keepalive_seconds > 0 and keepalive_interval > 0 and keepalive_interval >= MIN_KEEPALIVE_INTERVAL:
+                    loop = asyncio.get_running_loop()
+                    await self._cancel_keepalive_task()
+
+                    async def _keepalive() -> None:
+                        end_time = loop.time() + keepalive_seconds
+                        sends = 0
+                        try:
+                            while loop.time() < end_time:
+                                try:
+                                    await ddp_client.send_image(
+                                        rgb_data,
+                                        width,
+                                        height,
+                                        segment_id=segment_id,
+                                        timeout=timeout,
+                                        prepare_device=False,
+                                    )
+                                    sends += 1
+                                except (OSError, asyncio.TimeoutError) as err:
+                                    _LOGGER.debug("DDP keepalive stopped after error: %s", err)
+                                    break
+
+                                remaining = end_time - loop.time()
+                                if remaining <= 0:
+                                    break
+                                await asyncio.sleep(min(keepalive_interval, remaining))
+                        except asyncio.CancelledError:
+                            _LOGGER.debug("DDP keepalive task cancelled")
+                            raise
+                        finally:
+                            _LOGGER.debug(
+                                "DDP keepalive finished after %d refreshes (%.1fs window)",
+                                sends,
+                                keepalive_seconds,
+                            )
+
+                    task = asyncio.create_task(_keepalive())
+
+                    def _on_keepalive_done(completed: asyncio.Task) -> None:
+                        exc = completed.exception()
+                        if exc:
+                            _LOGGER.debug("DDP keepalive task finished with error: %s", exc)
+                        else:
+                            _LOGGER.debug("DDP keepalive task finished cleanly")
+                        self._keepalive_task = None
+
+                    task.add_done_callback(_on_keepalive_done)
+                    self._keepalive_task = task
+                    _LOGGER.info(
+                        "Keeping DDP frame alive for %.1f seconds (interval %.2f)",
+                        keepalive_seconds,
+                        keepalive_interval,
+                    )
             else:
                 _LOGGER.error("Failed to send image via DDP to %s", wled_host)
             

@@ -70,3 +70,24 @@ send_to_wled_ddp:
           min: 1
           max: 60
           mode: box
+    keepalive_seconds:
+      name: Keepalive Seconds
+      description: >-
+        How long to keep re-sending the frame so WLED does not revert after the realtime timeout.
+        Set to 0 to disable.
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 600
+          mode: box
+    keepalive_interval:
+      name: Keepalive Interval
+      description: Seconds between keepalive sends while keepalive is active
+      default: 1
+      selector:
+        number:
+          min: 0.1
+          max: 10
+          step: 0.1
+          mode: slider
