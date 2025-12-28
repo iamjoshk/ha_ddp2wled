@@ -1,4 +1,4 @@
-"""The WLEDVideoSync integration."""
+"""The PixelMagicTool integration."""
 from __future__ import annotations
 
 import logging
@@ -13,13 +13,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the WLEDVideoSync component."""
+    """Set up the PixelMagicTool component."""
     hass.data.setdefault(DOMAIN, {})
+    _LOGGER.info("PixelMagicTool component initialized with DDP persistence fixes")
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up WLEDVideoSync from a config entry."""
+    """Set up PixelMagicTool from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
@@ -27,6 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .services import async_setup_services
     await async_setup_services(hass)
 
+    _LOGGER.info("PixelMagicTool services registered with enhanced DDP persistence")
     return True
 
 

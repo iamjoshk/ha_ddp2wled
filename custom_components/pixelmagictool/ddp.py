@@ -47,15 +47,8 @@ class DDPClient:
         """
         Prepare WLED device to receive DDP data by configuring it via HTTP API.
         
-        This method sends an HTTP API call to WLED to:
-        - Disable live override mode (lor: 0)
-        - Exit live mode (live: false)
-        - Set segment to Solid effect (fx: 0) for individual LED control
-        - Mark segment as selected/active (sel: true)
-        - Turn segment on (on: true)
-        
-        This ensures DDP updates persist as the actual LED state rather than
-        a temporary realtime buffer that reverts when streaming stops.
+        This method sends an HTTP API call to WLED to enable live/realtime mode
+        for DDP streaming. This is critical for DDP data persistence.
         
         Args:
             segment_id: WLED segment ID to prepare (default: 0)
@@ -66,18 +59,11 @@ class DDPClient:
         """
         url = f"http://{self.host}/json/state"
         
-        # Prepare the WLED state for DDP streaming
-        # This configuration ensures DDP data persists on the display
+        # Enable live mode for DDP streaming - this is critical for persistence
+        # Based on WLEDVideoSync implementation
         payload = {
-            "on": True,              # Turn segment on
-            "lor": 0,                # Disable live override mode
-            "live": False,           # Exit live mode
-            "seg": [{
-                "id": segment_id,    # Target segment
-                "on": True,          # Turn this segment on
-                "fx": 0,             # Set to Solid effect (allows individual LED control)
-                "sel": True,         # Mark as selected/active
-            }]
+            "on": True,              # Turn device on
+            "live": True,            # Enable live/realtime mode for DDP
         }
         
         _LOGGER.debug(
@@ -94,7 +80,7 @@ class DDPClient:
                 ) as response:
                     if response.status == 200:
                         _LOGGER.info(
-                            "Successfully prepared WLED at %s for DDP streaming",
+                            "Successfully prepared WLED at %s for DDP streaming (live mode enabled)",
                             self.host
                         )
                         return True
@@ -127,7 +113,10 @@ class DDPClient:
         Persist a final frame to WLED state via HTTP.
 
         This writes per-pixel colors to the target segment so the image
-        remains after realtime DDP packets stop.
+        remains after realtime DDP packets stop. This is critical for
+        ensuring the image persists on the device.
+        
+        Based on WLEDVideoSync approach for proper state persistence.
         """
         if len(rgb_data) % 3 != 0:
             raise ValueError(
@@ -135,17 +124,23 @@ class DDPClient:
             )
 
         led_count = len(rgb_data) // 3
-        led_data = [
-            [idx, [rgb_data[idx * 3], rgb_data[idx * 3 + 1], rgb_data[idx * 3 + 2]]]
-            for idx in range(led_count)
-        ]
+        
+        # Convert RGB data to WLED individual LED format
+        # WLED expects format: [index, [r, g, b]]
+        led_data = []
+        for idx in range(led_count):
+            r = rgb_data[idx * 3]
+            g = rgb_data[idx * 3 + 1] 
+            b = rgb_data[idx * 3 + 2]
+            led_data.append([idx, [r, g, b]])
 
         payload = {
             "on": True,
             "seg": [
                 {
                     "id": segment_id,
-                    "i": led_data,
+                    "i": led_data,  # Individual LED colors
+                    "fx": 0,        # Solid effect for individual LED control
                 }
             ],
         }
@@ -298,17 +293,12 @@ class DDPClient:
             )
         
         # Prepare WLED device via HTTP API to ensure DDP data persists
-        if prepare_device:
-            _LOGGER.debug("Preparing WLED device before sending DDP packets")
-            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
-            if not prep_success:
-                _LOGGER.warning(
-                    "Failed to prepare WLED device, continuing with DDP send anyway"
-                )
-        else:
-            _LOGGER.debug(
-                "Skipping HTTP API preparation - sending DDP packets directly "
-                "(matching WLEDVideoSync web UI behavior)"
+        # Always prepare the device to ensure proper live mode is enabled
+        _LOGGER.debug("Preparing WLED device for DDP streaming to ensure persistence")
+        prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
+        if not prep_success:
+            _LOGGER.warning(
+                "Failed to prepare WLED device for live mode, continuing with DDP send anyway"
             )
         
         _LOGGER.info(

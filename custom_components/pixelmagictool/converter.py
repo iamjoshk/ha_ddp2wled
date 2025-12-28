@@ -244,7 +244,7 @@ class PixelMagicToolAPI:
             )
             
             # Send processed image via DDP protocol
-            # The DDPClient will prepare WLED via HTTP API before sending DDP packets
+            # Always prepare WLED device to ensure proper live mode for persistence
             ddp_client = DDPClient(wled_host)
             success = await ddp_client.send_image(
                 rgb_data, 
@@ -252,7 +252,7 @@ class PixelMagicToolAPI:
                 height, 
                 segment_id=segment_id,
                 timeout=timeout,
-                prepare_device=True,
+                prepare_device=False,  # Device preparation now handled within send_image
             )
             
             if success:
@@ -295,15 +295,16 @@ class PixelMagicToolAPI:
                             raise
                         finally:
                             if finished_normally:
+                                # Always try to persist the final frame when keepalive ends
                                 try:
                                     await ddp_client.apply_frame_state(
                                         rgb_data,
                                         segment_id=segment_id,
                                         timeout=timeout,
                                     )
-                                    _LOGGER.debug("Persisted final DDP frame after keepalive window")
+                                    _LOGGER.info("Successfully persisted final DDP frame after keepalive window")
                                 except Exception as err:
-                                    _LOGGER.debug(
+                                    _LOGGER.warning(
                                         "Failed to persist final frame after keepalive: %s",
                                         err,
                                     )
@@ -331,15 +332,16 @@ class PixelMagicToolAPI:
                         keepalive_interval,
                     )
                 else:
+                    # No keepalive - persist the frame immediately to ensure it stays
                     try:
                         await ddp_client.apply_frame_state(
                             rgb_data,
                             segment_id=segment_id,
                             timeout=timeout,
                         )
-                        _LOGGER.debug("Persisted final DDP frame without keepalive")
+                        _LOGGER.info("Successfully persisted final DDP frame without keepalive")
                     except Exception as err:
-                        _LOGGER.debug("Failed to persist final frame without keepalive: %s", err)
+                        _LOGGER.warning("Failed to persist final frame without keepalive: %s", err)
             else:
                 _LOGGER.error("Failed to send image via DDP to %s", wled_host)
             
