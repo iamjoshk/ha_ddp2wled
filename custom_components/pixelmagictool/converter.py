@@ -229,7 +229,8 @@ class PixelMagicToolAPI:
                 width, 
                 height, 
                 segment_id=segment_id,
-                timeout=timeout
+                timeout=timeout,
+                prepare_device=True,
             )
             
             if success:
