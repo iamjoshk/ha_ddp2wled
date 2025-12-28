@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import math
+import os
 from typing import Any
 
 import aiohttp
@@ -205,21 +206,8 @@ class PixelMagicToolAPI:
                 response.raise_for_status()
                 image_data = await response.read()
 
-            # Validate that we actually received image data
-            if not image_data or len(image_data) == 0:
-                _LOGGER.error("Downloaded image data is empty from URL: %s", image_url)
-                raise ValueError("Downloaded image data is empty. Please check the image URL.")
-
-            # Validate that the downloaded data is a valid image by trying to open it
-            try:
-                test_img = Image.open(io.BytesIO(image_data))
-                test_img.verify()  # Verify it's a valid image
-                _LOGGER.debug("Successfully validated image: format=%s, size=%dx%d", 
-                             test_img.format, test_img.width if hasattr(test_img, 'width') else 0, 
-                             test_img.height if hasattr(test_img, 'height') else 0)
-            except Exception as img_err:
-                _LOGGER.error("Downloaded data is not a valid image: %s", img_err)
-                raise ValueError(f"Downloaded data from URL is not a valid image: {img_err}") from img_err
+            # Validate the downloaded image data
+            self._validate_image_data(image_data, f"URL: {image_url}")
 
             # Prepare the API request
             data = aiohttp.FormData()
@@ -682,6 +670,32 @@ class PixelMagicToolAPI:
         
         return expanded
 
+    def _validate_image_data(self, image_data: bytes, source: str) -> None:
+        """
+        Validate that image data is not empty and is a valid image.
+        
+        Args:
+            image_data: The image data bytes to validate
+            source: Description of the image source (for error messages)
+            
+        Raises:
+            ValueError: If the image data is empty or invalid
+        """
+        # Check if data is empty
+        if not image_data or len(image_data) == 0:
+            _LOGGER.error("Image data is empty from source: %s", source)
+            raise ValueError(f"Image data is empty from {source}. Please check the image source.")
+        
+        # Validate that it's a valid image by trying to open it
+        try:
+            img = Image.open(io.BytesIO(image_data))
+            img.load()  # Force loading to validate the image data
+            _LOGGER.debug("Successfully validated image from %s: format=%s, size=%dx%d, mode=%s", 
+                         source, img.format, img.width, img.height, img.mode)
+        except Exception as img_err:
+            _LOGGER.error("Data from %s is not a valid image: %s", source, img_err)
+            raise ValueError(f"Data from {source} is not a valid image: {img_err}") from img_err
+
     async def _load_image_data(
         self,
         image_source: str,
@@ -695,7 +709,7 @@ class PixelMagicToolAPI:
             session: Optional aiohttp session (only used for URLs)
             
         Returns:
-            Image data as bytes
+            Image data as bytes (validated to be a valid image)
             
         Raises:
             ValueError: If image source is invalid or cannot be loaded
@@ -716,11 +730,9 @@ class PixelMagicToolAPI:
                     response.raise_for_status()
                     image_data = await response.read()
                     
-                    if not image_data or len(image_data) == 0:
-                        _LOGGER.error("Downloaded image data is empty from URL: %s", image_source)
-                        raise ValueError("Downloaded image data is empty. Please check the image URL.")
-                    
-                    return image_data
+                # Validate the downloaded image data
+                self._validate_image_data(image_data, f"URL: {image_source}")
+                return image_data
             finally:
                 if close_session:
                     await session.close()
@@ -729,26 +741,21 @@ class PixelMagicToolAPI:
             _LOGGER.debug("Loading image from local file: %s", image_source)
             
             try:
-                # Use asyncio to read file without blocking
-                import os
-                import asyncio
-                
                 # Check if file exists
                 if not os.path.exists(image_source):
                     _LOGGER.error("Local image file not found: %s", image_source)
                     raise FileNotFoundError(f"Image file not found: {image_source}")
                 
-                # Read file asynchronously
+                # Read file asynchronously using context manager
+                def read_file():
+                    with open(image_source, 'rb') as f:
+                        return f.read()
+                
                 loop = asyncio.get_event_loop()
-                image_data = await loop.run_in_executor(
-                    None,
-                    lambda: open(image_source, 'rb').read()
-                )
+                image_data = await loop.run_in_executor(None, read_file)
                 
-                if not image_data or len(image_data) == 0:
-                    _LOGGER.error("Local image file is empty: %s", image_source)
-                    raise ValueError("Local image file is empty.")
-                
+                # Validate the loaded image data
+                self._validate_image_data(image_data, f"local file: {image_source}")
                 return image_data
             except FileNotFoundError:
                 raise
@@ -836,21 +843,22 @@ class PixelMagicToolAPI:
                 )
                 # Continue anyway - DDP might still work
 
-            # Step 2: Load image from URL or local file
+            # Step 2: Load and validate image from URL or local file
+            # The _load_image_data method handles downloading from URLs or reading 
+            # from local files, and validates that the data is a valid image
             image_data = await self._load_image_data(image_source, session)
 
-            # Open image with PIL
+            # Open image with PIL for processing
             try:
                 img = Image.open(io.BytesIO(image_data))
-                # Verify it's a valid image
-                img.load()  # Force loading to validate the image data
-                _LOGGER.debug("Successfully opened image: format=%s, size=%dx%d, mode=%s", 
+                # Note: Validation already done in _load_image_data, this is just for processing
+                _LOGGER.debug("Processing image: format=%s, size=%dx%d, mode=%s", 
                              img.format, img.width, img.height, img.mode)
             except Exception as err:
-                _LOGGER.error("Failed to open image: %s", err)
-                raise ValueError(f"Failed to open image: {err}") from err
+                _LOGGER.error("Failed to open image for processing: %s", err)
+                raise ValueError(f"Failed to open image for processing: {err}") from err
 
-            # Resize image to target dimensions
+            # Step 3: Resize image to target dimensions
             _LOGGER.debug("Resizing image to %dx%d", width, height)
             img = img.resize((width, height), Image.Resampling.LANCZOS)
             
@@ -881,7 +889,7 @@ class PixelMagicToolAPI:
                 len(rgb_data), width, height
             )
             
-            # Step 3: Send via DDP
+            # Step 4: Send processed image via DDP protocol
             ddp_client = DDPClient(wled_host)
             success = await ddp_client.send_image(rgb_data, width, height, timeout)
             
