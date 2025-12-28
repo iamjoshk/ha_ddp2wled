@@ -205,6 +205,22 @@ class PixelMagicToolAPI:
                 response.raise_for_status()
                 image_data = await response.read()
 
+            # Validate that we actually received image data
+            if not image_data or len(image_data) == 0:
+                _LOGGER.error("Downloaded image data is empty from URL: %s", image_url)
+                raise ValueError("Downloaded image data is empty. Please check the image URL.")
+
+            # Validate that the downloaded data is a valid image by trying to open it
+            try:
+                test_img = Image.open(io.BytesIO(image_data))
+                test_img.verify()  # Verify it's a valid image
+                _LOGGER.debug("Successfully validated image: format=%s, size=%dx%d", 
+                             test_img.format, test_img.width if hasattr(test_img, 'width') else 0, 
+                             test_img.height if hasattr(test_img, 'height') else 0)
+            except Exception as img_err:
+                _LOGGER.error("Downloaded data is not a valid image: %s", img_err)
+                raise ValueError(f"Downloaded data from URL is not a valid image: {img_err}") from img_err
+
             # Prepare the API request
             data = aiohttp.FormData()
             data.add_field(
