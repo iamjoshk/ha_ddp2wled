@@ -6,6 +6,8 @@ import logging
 import socket
 import struct
 
+import aiohttp
+
 _LOGGER = logging.getLogger(__name__)
 
 # DDP Protocol Constants
@@ -36,6 +38,84 @@ class DDPClient:
         self.host = host
         self.port = port
         self.socket = None
+
+    async def prepare_wled_for_ddp(
+        self,
+        segment_id: int = 0,
+        timeout: int = 5,
+    ) -> bool:
+        """
+        Prepare WLED device to receive DDP data by configuring it via HTTP API.
+        
+        This method sends an HTTP API call to WLED to:
+        - Disable live override mode (lor: 0)
+        - Exit live mode (live: false)
+        - Set segment to Solid effect (fx: 0) for individual LED control
+        - Mark segment as selected/active (sel: true)
+        - Turn segment on (on: true)
+        
+        This ensures DDP updates persist as the actual LED state rather than
+        a temporary realtime buffer that reverts when streaming stops.
+        
+        Args:
+            segment_id: WLED segment ID to prepare (default: 0)
+            timeout: HTTP request timeout in seconds
+            
+        Returns:
+            True if preparation was successful, False otherwise
+        """
+        url = f"http://{self.host}/json/state"
+        
+        # Prepare the WLED state for DDP streaming
+        # This configuration ensures DDP data persists on the display
+        payload = {
+            "on": True,              # Turn segment on
+            "lor": 0,                # Disable live override mode
+            "live": False,           # Exit live mode
+            "seg": [{
+                "id": segment_id,    # Target segment
+                "on": True,          # Turn this segment on
+                "fx": 0,             # Set to Solid effect (allows individual LED control)
+                "sel": True,         # Mark as selected/active
+            }]
+        }
+        
+        _LOGGER.debug(
+            "Preparing WLED at %s for DDP streaming (segment %d)",
+            self.host, segment_id
+        )
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=timeout)
+                ) as response:
+                    if response.status == 200:
+                        _LOGGER.info(
+                            "Successfully prepared WLED at %s for DDP streaming",
+                            self.host
+                        )
+                        return True
+                    else:
+                        _LOGGER.warning(
+                            "Failed to prepare WLED at %s: HTTP %d",
+                            self.host, response.status
+                        )
+                        return False
+        except aiohttp.ClientError as err:
+            _LOGGER.warning(
+                "Network error preparing WLED at %s: %s",
+                self.host, err
+            )
+            return False
+        except Exception as err:
+            _LOGGER.warning(
+                "Unexpected error preparing WLED at %s: %s",
+                self.host, err
+            )
+            return False
 
     def _create_ddp_header(
         self,
@@ -127,7 +207,9 @@ class DDPClient:
         rgb_data: bytes,
         width: int,
         height: int,
+        segment_id: int = 0,
         timeout: int = 10,
+        prepare_device: bool = True,
     ) -> bool:
         """
         Send an image to WLED via DDP protocol.
@@ -140,7 +222,9 @@ class DDPClient:
             rgb_data: RGB pixel data (R,G,B,R,G,B,...) in row-major order
             width: Image width in pixels
             height: Image height in pixels
+            segment_id: WLED segment ID (default: 0)
             timeout: Socket timeout in seconds
+            prepare_device: Whether to prepare WLED via HTTP API before sending (default: True)
             
         Returns:
             True if successful
@@ -157,6 +241,15 @@ class DDPClient:
                 f"RGB data size mismatch: expected {expected_size} bytes "
                 f"for {width}x{height} image, got {len(rgb_data)} bytes"
             )
+        
+        # Prepare WLED device via HTTP API to ensure DDP data persists
+        if prepare_device:
+            _LOGGER.debug("Preparing WLED device before sending DDP packets")
+            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
+            if not prep_success:
+                _LOGGER.warning(
+                    "Failed to prepare WLED device, continuing with DDP send anyway"
+                )
         
         _LOGGER.info(
             "Sending %dx%d image (%d pixels, %d bytes) via DDP to %s:%d",
@@ -225,7 +318,9 @@ class DDPClient:
     async def send_rgb_data(
         self,
         rgb_data: bytes,
+        segment_id: int = 0,
         timeout: int = 10,
+        prepare_device: bool = True,
     ) -> bool:
         """
         Send raw RGB data to WLED via DDP protocol.
@@ -235,7 +330,9 @@ class DDPClient:
         
         Args:
             rgb_data: RGB pixel data (R,G,B,R,G,B,...)
+            segment_id: WLED segment ID (default: 0)
             timeout: Socket timeout in seconds
+            prepare_device: Whether to prepare WLED via HTTP API before sending (default: True)
             
         Returns:
             True if successful
@@ -244,6 +341,15 @@ class DDPClient:
             OSError: For network errors
         """
         num_pixels = len(rgb_data) // 3
+        
+        # Prepare WLED device via HTTP API to ensure DDP data persists
+        if prepare_device:
+            _LOGGER.debug("Preparing WLED device before sending DDP packets")
+            prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
+            if not prep_success:
+                _LOGGER.warning(
+                    "Failed to prepare WLED device, continuing with DDP send anyway"
+                )
         
         _LOGGER.info(
             "Sending %d pixels (%d bytes) via DDP to %s:%d",

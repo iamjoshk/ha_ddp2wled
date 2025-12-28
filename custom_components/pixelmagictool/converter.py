@@ -128,6 +128,7 @@ class PixelMagicToolAPI:
         width: int,
         height: int,
         brightness: int = 255,
+        segment_id: int = 0,
         timeout: int = 10,
         session: aiohttp.ClientSession | None = None,
     ) -> bool:
@@ -138,8 +139,9 @@ class PixelMagicToolAPI:
         the specified dimensions, converts it to RGB24 format, and sends it via 
         DDP protocol.
         
-        This implementation follows the WLEDVideoSync approach of sending DDP packets
-        directly without any HTTP API preparation, which prevents display resets.
+        Before sending DDP packets, this method prepares the WLED device via HTTP API
+        to ensure the image persists on the display instead of reverting to the
+        previous state when streaming stops.
         
         Args:
             image_source: URL (http://, https://) or local file path of the image
@@ -147,6 +149,7 @@ class PixelMagicToolAPI:
             width: Target width in pixels
             height: Target height in pixels
             brightness: Brightness multiplier (0-255)
+            segment_id: WLED segment ID (default: 0)
             timeout: Request timeout in seconds
             session: Optional aiohttp session (only used for URL downloads)
             
@@ -211,8 +214,15 @@ class PixelMagicToolAPI:
             )
             
             # Send processed image via DDP protocol
+            # The DDPClient will prepare WLED via HTTP API before sending DDP packets
             ddp_client = DDPClient(wled_host)
-            success = await ddp_client.send_image(rgb_data, width, height, timeout)
+            success = await ddp_client.send_image(
+                rgb_data, 
+                width, 
+                height, 
+                segment_id=segment_id,
+                timeout=timeout
+            )
             
             if success:
                 _LOGGER.info("Successfully sent image via DDP to %s", wled_host)
