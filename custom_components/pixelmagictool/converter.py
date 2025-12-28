@@ -10,6 +10,9 @@ import math
 from typing import Any
 
 import aiohttp
+from PIL import Image
+
+from .ddp import DDPClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -655,3 +658,106 @@ class PixelMagicToolAPI:
             i += 3
         
         return expanded
+
+    async def send_image_via_ddp(
+        self,
+        image_url: str,
+        wled_host: str,
+        width: int,
+        height: int,
+        brightness: int = 255,
+        timeout: int = 10,
+        session: aiohttp.ClientSession | None = None,
+    ) -> bool:
+        """
+        Send an image to WLED via DDP protocol.
+        
+        This method downloads the image, resizes it to the specified dimensions,
+        converts it to RGB24 format, and sends it via DDP protocol.
+        
+        Args:
+            image_url: URL of the image to send
+            wled_host: IP address or hostname of WLED device
+            width: Target width in pixels
+            height: Target height in pixels
+            brightness: Brightness multiplier (0-255)
+            timeout: Request timeout in seconds
+            session: Optional aiohttp session
+            
+        Returns:
+            True if successful
+            
+        Raises:
+            ValueError: If image processing fails
+            OSError: For network errors
+        """
+        close_session = False
+        if session is None:
+            session = aiohttp.ClientSession()
+            close_session = True
+
+        try:
+            # Download the image
+            _LOGGER.debug("Downloading image from: %s", image_url)
+            async with session.get(image_url) as response:
+                response.raise_for_status()
+                image_data = await response.read()
+
+            # Open image with PIL
+            try:
+                img = Image.open(io.BytesIO(image_data))
+            except Exception as err:
+                _LOGGER.error("Failed to open image: %s", err)
+                raise ValueError(f"Failed to open image: {err}") from err
+
+            # Resize image to target dimensions
+            _LOGGER.debug("Resizing image to %dx%d", width, height)
+            img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Convert to RGB mode (remove alpha channel if present)
+            if img.mode != "RGB":
+                _LOGGER.debug("Converting image from %s to RGB mode", img.mode)
+                img = img.convert("RGB")
+            
+            # Apply brightness
+            if brightness < 255:
+                brightness_factor = brightness / 255.0
+                _LOGGER.debug("Applying brightness factor: %.2f", brightness_factor)
+                pixels = img.load()
+                for y in range(height):
+                    for x in range(width):
+                        r, g, b = pixels[x, y]
+                        pixels[x, y] = (
+                            int(r * brightness_factor),
+                            int(g * brightness_factor),
+                            int(b * brightness_factor),
+                        )
+            
+            # Convert image to RGB byte array
+            rgb_data = img.tobytes()
+            
+            _LOGGER.info(
+                "Converted image to RGB24: %d bytes for %dx%d image",
+                len(rgb_data), width, height
+            )
+            
+            # Send via DDP
+            ddp_client = DDPClient(wled_host)
+            success = await ddp_client.send_image(rgb_data, width, height, timeout)
+            
+            if success:
+                _LOGGER.info("Successfully sent image via DDP to %s", wled_host)
+            else:
+                _LOGGER.error("Failed to send image via DDP to %s", wled_host)
+            
+            return success
+
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Network error downloading image: %s", err)
+            raise
+        except Exception as err:
+            _LOGGER.error("Error sending image via DDP: %s", err)
+            raise
+        finally:
+            if close_session:
+                await session.close()

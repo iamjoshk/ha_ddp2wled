@@ -41,6 +41,7 @@ from .const import (
     PATTERNS,
     SERVICE_CONVERT_IMAGE,
     SERVICE_SEND_TO_WLED,
+    SERVICE_SEND_TO_WLED_DDP,
 )
 from .converter import PixelMagicToolAPI
 
@@ -72,6 +73,19 @@ SEND_TO_WLED_SCHEMA = CONVERT_IMAGE_SCHEMA.extend(
         vol.Optional(CONF_USE_CHUNKS, default=DEFAULT_USE_CHUNKS): cv.boolean,
         vol.Optional(CONF_CHUNK_SIZE, default=DEFAULT_CHUNK_SIZE): cv.positive_int,
         vol.Optional(CONF_COLORS_ONLY, default=DEFAULT_COLORS_ONLY): cv.boolean,
+    }
+)
+
+SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
+    {
+        vol.Required("image_url"): cv.template,
+        vol.Required(CONF_WLED_HOST): cv.string,
+        vol.Required(CONF_WIDTH): cv.positive_int,
+        vol.Required(CONF_HEIGHT): cv.positive_int,
+        vol.Optional(CONF_BRIGHTNESS, default=DEFAULT_BRIGHTNESS): vol.All(
+            cv.positive_int, vol.Range(min=0, max=255)
+        ),
+        vol.Optional("timeout", default=10): cv.positive_int,
     }
 )
 
@@ -247,6 +261,95 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Error sending to WLED: %s", err)
             raise
 
+    async def handle_send_to_wled_ddp(call: ServiceCall) -> dict[str, Any]:
+        """Handle the send_to_wled_ddp service call."""
+        try:
+            # Render template if needed
+            image_url_template = call.data["image_url"]
+            if isinstance(image_url_template, template.Template):
+                image_url = image_url_template.async_render(parse_result=False)
+            else:
+                image_url = image_url_template
+
+            wled_host = call.data[CONF_WLED_HOST]
+            timeout_seconds = call.data["timeout"]
+            width = call.data[CONF_WIDTH]
+            height = call.data[CONF_HEIGHT]
+            brightness = call.data[CONF_BRIGHTNESS]
+
+            _LOGGER.info("Sending image to WLED via DDP at %s", wled_host)
+
+            # Create API client
+            api = PixelMagicToolAPI()
+
+            # Send image via DDP
+            try:
+                success = await api.send_image_via_ddp(
+                    image_url=image_url,
+                    wled_host=wled_host,
+                    width=width,
+                    height=height,
+                    brightness=brightness,
+                    timeout=timeout_seconds,
+                )
+            except ValueError as err:
+                _LOGGER.error("Failed to process image: %s", err)
+                return {
+                    "success": False,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "error": str(err),
+                }
+            except OSError as err:
+                _LOGGER.error("Network error sending DDP: %s", err)
+                return {
+                    "success": False,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "error": str(err),
+                }
+
+            if success:
+                _LOGGER.info("Successfully sent image via DDP to WLED")
+
+                # Fire success event
+                hass.bus.async_fire(
+                    f"{DOMAIN}_sent_to_wled_ddp",
+                    {
+                        "image_url": image_url,
+                        "wled_host": wled_host,
+                        "width": width,
+                        "height": height,
+                        "brightness": brightness,
+                    },
+                )
+                
+                # Return result as service response
+                return {
+                    "success": True,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "protocol": "ddp",
+                    "width": width,
+                    "height": height,
+                    "brightness": brightness,
+                }
+            else:
+                _LOGGER.error("Failed to send to WLED via DDP")
+                return {
+                    "success": False,
+                    "image_url": image_url,
+                    "wled_host": wled_host,
+                    "error": "Failed to send to WLED via DDP",
+                }
+
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Network error downloading image: %s", err)
+            raise
+        except Exception as err:
+            _LOGGER.error("Error sending to WLED via DDP: %s", err)
+            raise
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -261,6 +364,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SEND_TO_WLED,
         handle_send_to_wled,
         schema=SEND_TO_WLED_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SEND_TO_WLED_DDP,
+        handle_send_to_wled_ddp,
+        schema=SEND_TO_WLED_DDP_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 
