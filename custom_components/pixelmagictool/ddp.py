@@ -117,6 +117,75 @@ class DDPClient:
             )
             return False
 
+    async def apply_frame_state(
+        self,
+        rgb_data: bytes,
+        segment_id: int = 0,
+        timeout: int = 5,
+    ) -> bool:
+        """
+        Persist a final frame to WLED state via HTTP.
+
+        This writes per-pixel colors to the target segment so the image
+        remains after realtime DDP packets stop.
+        """
+        if len(rgb_data) % 3 != 0:
+            raise ValueError(
+                f"RGB data length must be a multiple of 3 (got {len(rgb_data)} bytes)"
+            )
+
+        led_count = len(rgb_data) // 3
+        led_data = [
+            [idx, [rgb_data[idx * 3], rgb_data[idx * 3 + 1], rgb_data[idx * 3 + 2]]]
+            for idx in range(led_count)
+        ]
+
+        payload = {
+            "on": True,
+            "seg": [
+                {
+                    "id": segment_id,
+                    "i": led_data,
+                }
+            ],
+        }
+
+        url = f"http://{self.host}/json/state"
+        _LOGGER.debug(
+            "Persisting final frame to %s segment %d via POST %s (leds=%d)",
+            self.host,
+            segment_id,
+            url,
+            led_count,
+        )
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as response:
+                    if response.status == 200:
+                        _LOGGER.debug("Persisted final frame to WLED state")
+                        return True
+                    _LOGGER.debug(
+                        "Failed to persist final frame to WLED: HTTP %d %s",
+                        response.status,
+                        response.reason,
+                    )
+                    return False
+        except aiohttp.ClientError as err:
+            _LOGGER.debug(
+                "Network error persisting final frame to %s: %s", self.host, err
+            )
+            return False
+        except Exception as err:
+            _LOGGER.debug(
+                "Unexpected error persisting final frame to %s: %s", self.host, err
+            )
+            return False
+
     def _create_ddp_header(
         self,
         flags: int,
