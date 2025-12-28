@@ -5,7 +5,6 @@ import asyncio
 import io
 import logging
 import os
-from typing import Any
 
 import aiohttp
 from PIL import Image
@@ -150,7 +149,7 @@ class PixelMagicToolAPI:
         By default this matches the WLEDVideoSync behavior: DDP packets are sent
         directly without any HTTP preparation. A `prepare_device` option is available
         on lower-level calls for rare cases where you need WLED configured via HTTP
-        before streaming, but it is off by default.
+        first, but it is off by default.
         
         Args:
             image_source: URL (http://, https://) or local file path of the image
@@ -245,92 +244,6 @@ class PixelMagicToolAPI:
             raise
         except Exception as err:
             _LOGGER.error("Error sending image via DDP: %s", err)
-            raise
-        finally:
-            if close_session:
-                await session.close()
-
-    async def process_image_to_rgb(
-        self,
-        image_source: str,
-        width: int,
-        height: int,
-        brightness: int = 255,
-        session: aiohttp.ClientSession | None = None,
-    ) -> bytes:
-        """
-        Process an image to RGB24 format for streaming.
-        
-        Loads, resizes, and converts an image to RGB24 byte array without sending.
-        Used for continuous streaming where multiple frames are sent.
-        
-        Args:
-            image_source: URL (http://, https://) or local file path of the image
-            width: Target width in pixels
-            height: Target height in pixels
-            brightness: Brightness multiplier (0-255)
-            session: Optional aiohttp session (only used for URL downloads)
-            
-        Returns:
-            RGB24 byte array ready for DDP streaming
-            
-        Raises:
-            ValueError: If image processing fails
-            FileNotFoundError: If local file doesn't exist
-        """
-        close_session = False
-        if session is None:
-            session = aiohttp.ClientSession()
-            close_session = True
-
-        try:
-            # Load and validate image
-            image_data = await self._load_image_data(image_source, session)
-
-            # Open image with PIL for processing
-            try:
-                img = Image.open(io.BytesIO(image_data))
-                _LOGGER.debug("Processing image: format=%s, size=%dx%d, mode=%s", 
-                             img.format, img.width, img.height, img.mode)
-            except Exception as err:
-                _LOGGER.error("Failed to open image for processing: %s", err)
-                raise ValueError(f"Failed to open image for processing: {err}") from err
-
-            # Resize image to target dimensions
-            _LOGGER.debug("Resizing image to %dx%d", width, height)
-            img = img.resize((width, height), Image.Resampling.LANCZOS)
-            
-            # Convert to RGB mode (remove alpha channel if present)
-            if img.mode != "RGB":
-                _LOGGER.debug("Converting image from %s to RGB mode", img.mode)
-                img = img.convert("RGB")
-            
-            # Apply brightness
-            if brightness < 255:
-                brightness_factor = brightness / 255.0
-                _LOGGER.debug("Applying brightness factor: %.2f", brightness_factor)
-                pixels = img.load()
-                for y in range(height):
-                    for x in range(width):
-                        r, g, b = pixels[x, y]
-                        pixels[x, y] = (
-                            int(r * brightness_factor),
-                            int(g * brightness_factor),
-                            int(b * brightness_factor),
-                        )
-            
-            # Convert image to RGB byte array
-            rgb_data = img.tobytes()
-            
-            _LOGGER.info(
-                "Converted image to RGB24: %d bytes for %dx%d image",
-                len(rgb_data), width, height
-            )
-            
-            return rgb_data
-
-        except Exception as err:
-            _LOGGER.error("Error processing image: %s", err)
             raise
         finally:
             if close_session:
