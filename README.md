@@ -5,17 +5,45 @@
 [![Home Assistant Integration](https://img.shields.io/badge/Home%20Assistant-Integration-blue.svg)](https://www.home-assistant.io/)
 [![HACS Compatible](https://img.shields.io/badge/HACS-Compatible-brightgreen.svg)](https://hacs.xyz/)
 
-A Home Assistant custom integration that converts images to WLED JSON format for HUB75 and 2D Matrix LED panels. Perfect for displaying album art, weather icons, or any dynamic images on your LED displays!
+A Home Assistant custom integration that sends images to WLED devices for HUB75 and 2D Matrix LED panels. Perfect for displaying album art, weather icons, or any dynamic images on your LED displays!
 
 ## What This Does
 
 This integration provides **Home Assistant services** that can:
 - 🔄 Convert images from URLs (including sensor attributes) to WLED format
-- 📤 **Send converted images directly to WLED devices using the WLED JSON API** (`/json/state` endpoint)
+- 📤 **Send images directly to WLED devices using DDP protocol or WLED JSON API**
+- ⚡ **DDP protocol support for better performance and reliability** (recommended)
 - ✅ **Automatically ensures device updates** (not just preview) by setting correct WLED parameters
 - 🎨 Work with album art from media players, weather icons, camera snapshots, and more
 - 🤖 Be called from automations, scripts, and Node-RED flows
 - 💾 Store conversions in a sensor for later reuse
+
+## Communication Protocols
+
+The integration supports two protocols for sending images to WLED:
+
+### DDP Protocol (Recommended) 🚀
+
+**NEW!** DDP (Distributed Display Protocol) is now supported and is the **recommended method** for sending images to WLED. Used by tools like [WLEDVideoSync](https://github.com/zak-45/WLEDVideoSync), DDP provides:
+
+- ⚡ **Better performance** - Direct UDP streaming, no HTTP overhead
+- 🎯 **More reliable** - Purpose-built for LED pixel streaming
+- 📦 **Simpler payloads** - Raw RGB24 data, no JSON parsing required
+- 🔄 **Real-time streaming** - Ideal for live updates and animations
+- 💪 **Better for large matrices** - Handles larger displays more efficiently
+
+**Use the `send_to_wled_ddp` service for DDP protocol.**
+
+### JSON API Protocol
+
+The traditional WLED JSON API (`/json/state` endpoint) is still supported:
+
+- 🔄 Uses the Pixel Magic Tool API for conversion
+- 📤 Sends JSON payloads to WLED
+- 🗜️ Supports compression and chunking for large images
+- 📋 More configuration options (patterns, segments, etc.)
+
+**Use the `send_to_wled` service for JSON API protocol.**
 
 ## Use Cases
 
@@ -53,14 +81,13 @@ This integration provides **Home Assistant services** that can:
 
 ## Quick Start
 
-Once installed, the integration provides two services and a sensor:
+Once installed, the integration provides three services and a sensor:
 
 ### Services
 
-Both services support **service responses**, allowing you to retrieve the converted WLED JSON directly in your automations. The last conversion is also stored in the sensor for easy access:
-
-1. **`pixelmagictool.convert_image`** - Converts an image URL to WLED JSON and returns it as a service response
-2. **`pixelmagictool.send_to_wled`** - Converts and sends directly to your WLED device via the **WLED JSON API** (`http://[WLED-IP]/json/state`), also returns the conversion result
+1. **`pixelmagictool.send_to_wled_ddp`** - ⚡ **Recommended**: Send images via DDP protocol for best performance
+2. **`pixelmagictool.send_to_wled`** - Send images via WLED JSON API (traditional method)
+3. **`pixelmagictool.convert_image`** - Convert image to WLED JSON format only (no sending)
 
 ### Sensor
 
@@ -79,7 +106,26 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 
 ## Usage Examples
 
-### Example 1: Display Spotify Album Art
+### Example 1: Display Spotify Album Art (DDP - Recommended)
+
+```yaml
+automation:
+  - alias: "Update WLED with Album Art via DDP"
+    trigger:
+      - platform: state
+        entity_id: media_player.spotify
+        attribute: entity_picture
+    action:
+      - service: pixelmagictool.send_to_wled_ddp
+        data:
+          image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+          wled_host: "192.168.1.100"
+          width: 32
+          height: 32
+          brightness: 255
+```
+
+### Example 2: Display Spotify Album Art (JSON API)
 
 ```yaml
 automation:
@@ -240,11 +286,11 @@ automation:
           message: "Converted image with {{ result.wled_json.seg.i | length }} color values"
 ```
 
-### Example 7: Camera Snapshot
+### Example 7: Camera Snapshot (DDP)
 
 ```yaml
 automation:
-  - alias: "Show Camera on LED Display"
+  - alias: "Show Camera on LED Display via DDP"
     trigger:
       - platform: state
         entity_id: binary_sensor.front_door_motion
@@ -256,15 +302,44 @@ automation:
         data:
           filename: /config/www/snapshots/front_door.jpg
       - delay: 1
-      - service: pixelmagictool.send_to_wled
+      - service: pixelmagictool.send_to_wled_ddp
         data:
           image_url: "http://homeassistant.local:8123/local/snapshots/front_door.jpg"
           wled_host: "192.168.1.100"
           width: 32
           height: 32
+          brightness: 255
 ```
 
 ## Service Parameters
+
+### `pixelmagictool.send_to_wled_ddp` (Recommended)
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `image_url` | Yes | - | URL of image (supports Jinja2 templates) |
+| `wled_host` | Yes | - | IP address or hostname of WLED device |
+| `width` | Yes | - | Target width in pixels |
+| `height` | Yes | - | Target height in pixels |
+| `brightness` | No | 255 | LED brightness multiplier (0-255) |
+| `timeout` | No | 10 | Request timeout in seconds |
+
+**Service Response:**
+Returns a dictionary containing:
+- `success` - Boolean indicating if the send was successful
+- `image_url` - The processed image URL
+- `wled_host` - The WLED device host
+- `protocol` - Protocol used ("ddp")
+- `width` - Image width
+- `height` - Image height
+- `brightness` - Brightness level used
+
+**Benefits of DDP:**
+- ⚡ Faster than JSON API - direct UDP streaming
+- 🎯 More reliable - no HTTP overhead
+- 💪 Better for real-time updates
+- 📦 Handles large matrices efficiently
+- 🔄 No payload size limits like JSON API
 
 ### `pixelmagictool.convert_image`
 
@@ -335,11 +410,36 @@ The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 - 🔗 Works with any image URL including Home Assistant sensor attributes
 - 🤖 Perfect for automations with media players, weather, cameras, and more
 - 💾 Can convert-only or convert-and-send in one action
-- 🗜️ Compression support to reduce payload size
-- 📦 Chunked sending for very large images that exceed WLED's payload limits
-- 🎯 Colors-only mode for minimal payload size (reduces overhead by ~40-60 bytes)
+- ⚡ **DDP protocol support for better performance** (NEW!)
+- 🗜️ Compression support to reduce payload size (JSON API)
+- 📦 Chunked sending for very large images that exceed WLED's payload limits (JSON API)
+- 🎯 Colors-only mode for minimal payload size (JSON API)
 
-## Pattern Types Explained
+## When to Use DDP vs JSON API
+
+### Use DDP Protocol (Recommended) ⚡
+
+The `send_to_wled_ddp` service is **recommended** for most use cases:
+
+- ✅ **Real-time image updates** - album art, camera feeds, live content
+- ✅ **Large LED matrices** - 64x64 and larger
+- ✅ **Best performance** - fastest and most reliable
+- ✅ **Simple setup** - just specify image URL, host, width, and height
+- ✅ **No payload size limits** - handles any matrix size
+- ✅ **Based on WLEDVideoSync** - proven approach for image casting
+
+### Use JSON API
+
+The `send_to_wled` service is best for:
+
+- 📋 **Advanced WLED features** - custom patterns, segments, effects
+- 🔄 **Need WLED JSON format** - for debugging or custom integrations
+- 📊 **Storing conversions** - want JSON in sensor attributes
+- 🎨 **Fine-grained control** - compression levels, chunking options
+
+**Note:** For most users, especially those experiencing issues with JSON API payloads, **switch to DDP protocol** (`send_to_wled_ddp`) for better results.
+
+## Pattern Types Explained (JSON API Only)
 
 - **Range**: Most efficient, groups consecutive identical colors `[start, end, color]`
 - **Index**: Explicit positioning `[0, color0, 1, color1, ...]`  
@@ -348,6 +448,17 @@ The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 For HUB75 panels, **Range** pattern typically provides the best balance of size and compatibility.
 
 ## Tips for Best Results
+
+### DDP Protocol Tips
+
+- **Image URLs**: Use full URLs or Home Assistant local URLs (`http://homeassistant.local:8123/...`)
+- **Jinja2 Templates**: The `image_url` parameter supports Jinja2 templates (e.g., `{{ state_attr('media_player.spotify', 'entity_picture') }}`)
+- **Dimensions**: Must specify exact width and height matching your WLED matrix configuration
+- **Brightness**: Set to 255 for maximum brightness, lower values will dim the image
+- **Performance**: DDP automatically handles packet fragmentation for large matrices
+- **Network**: WLED listens on UDP port 4048 - ensure your firewall allows this
+
+### JSON API Tips
 
 - **Image URLs**: Use full URLs or Home Assistant local URLs (`http://homeassistant.local:8123/...`)
 - **Jinja2 Templates**: The `image_url` parameter supports Jinja2 templates (e.g., `{{ state_attr('media_player.spotify', 'entity_picture') }}`)
@@ -360,13 +471,13 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Colors-Only Mode**: Enable `colors_only: true` to send minimal payloads with just the color data, reducing overhead by ~40-60 bytes. This is useful when every byte counts, though it omits some WLED parameters (fx, sel, on, bri, live) and WLED will use default or existing values for these fields.
 - **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially. WLED documentation recommends sending chunks of 256 colors at a time, waiting for each request to complete before sending the next.
 - **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+  - **Best solution**: Switch to DDP protocol with `send_to_wled_ddp` service
   - Enable colors-only mode with `colors_only: true` (saves ~40-60 bytes overhead)
   - Enable chunked sending with `use_chunks: true` (recommended for payloads > 15KB)
   - Enable compression with `compression: true` and adjust `compression_level` (1-10)
   - Adjust `chunk_size` (default 256 LEDs per WLED recommendation) - smaller values = more requests but better compatibility
   - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
   - Try the "range" pattern type (most efficient)
-  - Use the `convert_image` service to get the JSON, then use alternative upload methods if needed
 
 ## Advanced Usage
 
