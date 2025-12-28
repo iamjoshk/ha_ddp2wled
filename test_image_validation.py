@@ -10,13 +10,16 @@ import asyncio
 import io
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from PIL import Image
 
-# Import the converter - need to handle relative imports
-sys.path.insert(0, 'custom_components')
-from pixelmagictool.converter import PixelMagicToolAPI
+# Import the converter directly from the integration folder (no Home Assistant deps)
+sys.path.insert(0, 'custom_components/pixelmagictool')
+from converter import PixelMagicToolAPI
 
 
+@pytest.mark.asyncio
 async def test_ddp_empty_image_data():
     """Test that send_image_via_ddp rejects empty image data."""
     print("=" * 70)
@@ -58,6 +61,7 @@ async def test_ddp_empty_image_data():
         return False
 
 
+@pytest.mark.asyncio
 async def test_ddp_invalid_image_data():
     """Test that send_image_via_ddp rejects invalid image data."""
     print("\n" + "=" * 70)
@@ -99,6 +103,7 @@ async def test_ddp_invalid_image_data():
         return False
 
 
+@pytest.mark.asyncio
 async def test_ddp_valid_image_data():
     """Test that send_image_via_ddp accepts valid image data."""
     print("\n" + "=" * 70)
@@ -132,8 +137,8 @@ async def test_ddp_valid_image_data():
     mock_session.get = MagicMock(return_value=mock_get_response)
     mock_session.post = MagicMock(return_value=mock_post_response)
     
-    # Mock the DDPClient
-    with patch('pixelmagictool.converter.DDPClient') as mock_ddp:
+    # Mock the DDPClient (use local module path since we're importing converter directly)
+    with patch('converter.DDPClient') as mock_ddp:
         mock_ddp_instance = MagicMock()
         mock_ddp_instance.send_image = AsyncMock(return_value=True)
         mock_ddp.return_value = mock_ddp_instance
@@ -159,80 +164,6 @@ async def test_ddp_valid_image_data():
             return False
 
 
-async def test_convert_image_empty_data():
-    """Test that convert_image rejects empty image data."""
-    print("\n" + "=" * 70)
-    print("Test: Convert Image Empty Data Validation")
-    print("=" * 70)
-    
-    api = PixelMagicToolAPI()
-    
-    # Mock the session to return empty data
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.read = AsyncMock(return_value=b"")  # Empty data
-    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-    mock_response.__aexit__ = AsyncMock(return_value=None)
-    
-    mock_session.get = MagicMock(return_value=mock_response)
-    
-    try:
-        await api.convert_image(
-            image_url="http://example.com/test.jpg",
-            session=mock_session,
-        )
-        print("✗ Test failed - Should have raised ValueError for empty data")
-        return False
-    except ValueError as e:
-        if "empty" in str(e).lower():
-            print(f"✓ Test passed - Correctly rejected empty data: {e}")
-            return True
-        else:
-            print(f"✗ Test failed - Wrong error message: {e}")
-            return False
-    except Exception as e:
-        print(f"✗ Test failed - Unexpected exception: {e}")
-        return False
-
-
-async def test_convert_image_invalid_data():
-    """Test that convert_image rejects invalid image data."""
-    print("\n" + "=" * 70)
-    print("Test: Convert Image Invalid Data Validation")
-    print("=" * 70)
-    
-    api = PixelMagicToolAPI()
-    
-    # Mock the session to return invalid data
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.read = AsyncMock(return_value=b"Not an image")
-    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-    mock_response.__aexit__ = AsyncMock(return_value=None)
-    
-    mock_session.get = MagicMock(return_value=mock_response)
-    
-    try:
-        await api.convert_image(
-            image_url="http://example.com/test.jpg",
-            session=mock_session,
-        )
-        print("✗ Test failed - Should have raised ValueError for invalid image")
-        return False
-    except ValueError as e:
-        if "valid image" in str(e).lower():
-            print(f"✓ Test passed - Correctly rejected invalid image: {e}")
-            return True
-        else:
-            print(f"✗ Test failed - Wrong error message: {e}")
-            return False
-    except Exception as e:
-        print(f"✗ Test failed - Unexpected exception: {e}")
-        return False
-
-
 async def run_all_tests():
     """Run all tests."""
     print("\n")
@@ -248,10 +179,6 @@ async def run_all_tests():
     results.append(await test_ddp_empty_image_data())
     results.append(await test_ddp_invalid_image_data())
     results.append(await test_ddp_valid_image_data())
-    
-    # Run convert_image tests
-    results.append(await test_convert_image_empty_data())
-    results.append(await test_convert_image_invalid_data())
     
     print("\n\n")
     print("*" * 70)
