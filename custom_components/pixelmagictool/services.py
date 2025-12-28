@@ -34,6 +34,7 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         vol.Optional(CONF_BRIGHTNESS, default=DEFAULT_BRIGHTNESS): vol.All(
             cv.positive_int, vol.Range(min=0, max=255)
         ),
+        vol.Optional("segment_id", default=0): cv.positive_int,
         vol.Optional("timeout", default=10): cv.positive_int,
     }
 )
@@ -71,6 +72,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             width = call.data[CONF_WIDTH]
             height = call.data[CONF_HEIGHT]
             brightness = call.data[CONF_BRIGHTNESS]
+            segment_id = call.data["segment_id"]
 
             _LOGGER.info("Sending image to WLED via DDP at %s (source: %s)", wled_host, source_type)
 
@@ -85,6 +87,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     width=width,
                     height=height,
                     brightness=brightness,
+                    segment_id=segment_id,
                     timeout=timeout_seconds,
                 )
             except ValueError as err:
@@ -128,6 +131,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         "width": width,
                         "height": height,
                         "brightness": brightness,
+                        "segment_id": segment_id,
                     },
                 )
                 
@@ -141,6 +145,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     "width": width,
                     "height": height,
                     "brightness": brightness,
+                    "segment_id": segment_id,
                 }
             else:
                 _LOGGER.error("Failed to send to WLED via DDP")
