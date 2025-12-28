@@ -148,8 +148,8 @@ class DDPClient:
         Returns:
             10-byte header as bytes
         """
-        # Pack header in network (big-endian) format matching upstream WLEDVideoSync
-        # Format: !BBBBLH (10 bytes)
+        # Pack header in network (big-endian) format matching upstream WLEDVideoSync.
+        # Format: !BBBBLH (10 bytes total: 4xB + 1xL + 1xH)
         return struct.pack("!BBBBLH", flags, sequence, data_type, dest_id, data_offset, data_length)
 
     def _create_ddp_packet(
