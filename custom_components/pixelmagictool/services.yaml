@@ -229,3 +229,60 @@ send_to_wled:
       selector:
         boolean:
 
+send_to_wled_ddp:
+  name: Send to WLED via DDP
+  description: Send an image directly to a WLED device using the DDP (Distributed Display Protocol). This is a more efficient protocol than JSON API, recommended for better performance and reliability.
+  response:
+    optional: true
+  fields:
+    image_url:
+      name: Image URL
+      description: URL of the image to send (can be a template that reads from sensor attributes)
+      required: true
+      example: "{{ states.sensor.album_art.attributes.entity_picture }}"
+      selector:
+        text:
+    wled_host:
+      name: WLED Host
+      description: IP address or hostname of WLED device
+      required: true
+      example: "192.168.1.100"
+      selector:
+        text:
+    width:
+      name: Width
+      description: Target width in pixels (required for DDP)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    height:
+      name: Height
+      description: Target height in pixels (required for DDP)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    brightness:
+      name: Brightness
+      description: LED brightness (0-255)
+      default: 255
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: slider
+    timeout:
+      name: Timeout
+      description: Request timeout in seconds
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          mode: box
+
