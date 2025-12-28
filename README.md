@@ -47,24 +47,44 @@ The traditional WLED JSON API (`/json/state` endpoint) is still supported:
 
 **Use the `send_to_wled` service for JSON API protocol.**
 
-### Connection Model: One-Shot vs. Streaming
+### Connection Models: One-Shot vs. Continuous Streaming
 
-**PixelMagicTool uses a one-shot connection model** - this is different from continuous streaming tools like WLEDVideoSync:
+**🆕 WLEDVideoSync now supports BOTH connection models:**
 
-- 📡 **No Constant Connection Required** - Home Assistant connects to WLED only when sending an image
-- ⚡ **Quick Send & Close** - Connection is established, image is sent, then closed (typically <100ms)
-- 🎯 **Persistent Display** - Images remain on WLED until you send a new one or change WLED state
-- 🔄 **Automation Triggered** - Updates happen on-demand via automations, not continuous streaming
-- 💾 **Low Network Usage** - Only uses network bandwidth during actual image sends
+#### One-Shot Mode (Default)
 
-**Comparison with WLEDVideoSync:**
+**Default behavior** for the `send_to_wled_ddp` service:
 
-| Aspect | PixelMagicTool | WLEDVideoSync |
-|--------|----------------|---------------|
-| Connection | One-shot per image | Continuous streaming |
-| Use Case | Static images via automations | Live video/screen casting |
-| HA Connection | Only during send | Maintained while streaming |
-| Best For | Album art, icons, snapshots | Real-time video content |
+- 📡 **No Constant Connection** - Connects only when sending
+- ⚡ **Quick Send & Close** - Connection established, image sent, then closed (<100ms)
+- 🎯 **Persistent Display** - Images remain until you send a new one
+- 🔄 **Automation Triggered** - Updates on-demand via automations
+- 💾 **Low Network Usage** - Bandwidth only during sends
+- **Best for:** Album art, weather icons, snapshots
+
+#### Continuous Streaming Mode (New!)
+
+**New streaming services** inspired by WLEDVideoSync:
+
+- 🔗 **Persistent Connection** - Connection stays open for multiple frames
+- 🎬 **Multiple Frames** - Send many images without reconnecting
+- ⚡ **Lower Overhead** - Faster for frequent updates
+- 🎥 **Animation Support** - Perfect for slideshows and live feeds
+- **Best for:** Animations, frequent updates, video-like sequences
+
+**Use streaming services:** `start_streaming`, `send_frame`, `stop_streaming`
+
+> **💡 See [STREAMING.md](STREAMING.md) for detailed streaming documentation and examples.**
+
+**Comparison Table:**
+
+| Aspect | One-Shot (`send_to_wled_ddp`) | Continuous Streaming (New!) |
+|--------|-------------------------------|---------------------------|
+| Connection | Opens & closes each time | Stays open |
+| Overhead | Higher per image | Lower per frame |
+| Use Case | Single images | Multiple frames/animation |
+| Setup | Simple (one call) | Three-step (start/send/stop) |
+| Best For | Album art, icons, snapshots | Slideshows, live feeds, video |
 
 > **💡 See [FAQ.md](FAQ.md) for detailed explanations** about connection requirements, network usage, and when to use each approach.
 
@@ -104,13 +124,19 @@ The traditional WLED JSON API (`/json/state` endpoint) is still supported:
 
 ## Quick Start
 
-Once installed, the integration provides three services and a sensor:
+Once installed, the integration provides multiple services:
 
 ### Services
 
-1. **`pixelmagictool.send_to_wled_ddp`** - ⚡ **Recommended**: Send images via DDP protocol for best performance
+#### One-Shot Mode (Simple)
+1. **`pixelmagictool.send_to_wled_ddp`** - ⚡ **Recommended**: Send single images via DDP protocol
 2. **`pixelmagictool.send_to_wled`** - Send images via WLED JSON API (traditional method)
 3. **`pixelmagictool.convert_image`** - Convert image to WLED JSON format only (no sending)
+
+#### Continuous Streaming Mode (Advanced) 🆕
+4. **`pixelmagictool.start_streaming`** - Start a streaming session with persistent connection
+5. **`pixelmagictool.send_frame`** - Send frames to active streaming session
+6. **`pixelmagictool.stop_streaming`** - Stop streaming session and close connection
 
 ### Sensor
 
@@ -120,6 +146,8 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 - Segment ID, brightness, and dimensions used
 
 **Note:** For very large images, the WLED JSON attribute may increase database size. Consider using compression or smaller image dimensions if database performance becomes a concern. Service responses are also available for accessing conversion data without storing it.
+
+**👉 See [STREAMING.md](STREAMING.md) for continuous streaming documentation and examples!** 🆕
 
 **👉 See [WLED_API.md](WLED_API.md) for details on the WLED JSON API integration!**
 
@@ -445,6 +473,8 @@ The `sensor.pixel_magic_tool_last_conversion` entity provides these attributes:
 - 🤖 Perfect for automations with media players, weather, cameras, and more
 - 💾 Can convert-only or convert-and-send in one action
 - ⚡ **DDP protocol support for better performance** (NEW!)
+- 🔄 **Continuous streaming mode** - WLEDVideoSync-style persistent connections (NEW!) 🆕
+- 📺 **One-shot and streaming modes** - Choose based on your use case (NEW!) 🆕
 - 🗜️ Compression support to reduce payload size (JSON API)
 - 📦 Chunked sending for very large images that exceed WLED's payload limits (JSON API)
 - 🎯 Colors-only mode for minimal payload size (JSON API)
@@ -462,6 +492,18 @@ The `send_to_wled_ddp` service is **recommended** for most use cases:
 - ✅ **No payload size limits** - handles any matrix size
 - ✅ **Based on WLEDVideoSync** - proven approach for image casting
 
+### Use Continuous Streaming (Advanced) 🆕
+
+The new streaming services (`start_streaming`, `send_frame`, `stop_streaming`) are best for:
+
+- ✅ **Animations and slideshows** - multiple frames in sequence
+- ✅ **Frequent updates** - >1 update per second
+- ✅ **Live feeds** - camera streams, real-time content
+- ✅ **Lower overhead** - persistent connection for many frames
+- ✅ **WLEDVideoSync-style streaming** - continuous connection model
+
+**👉 See [STREAMING.md](STREAMING.md) for streaming examples and best practices!**
+
 ### Use JSON API
 
 The `send_to_wled` service is best for:
@@ -471,7 +513,7 @@ The `send_to_wled` service is best for:
 - 📊 **Storing conversions** - want JSON in sensor attributes
 - 🎨 **Fine-grained control** - compression levels, chunking options
 
-**Note:** For most users, especially those experiencing issues with JSON API payloads, **switch to DDP protocol** (`send_to_wled_ddp`) for better results.
+**Note:** For most users, especially those experiencing issues with JSON API payloads, **switch to DDP protocol** (`send_to_wled_ddp` or streaming services) for better results.
 
 ## Pattern Types Explained (JSON API Only)
 
