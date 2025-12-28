@@ -7,6 +7,8 @@
 
 A Home Assistant custom integration that sends images to WLED devices for HUB75 and 2D Matrix LED panels. Perfect for displaying album art, weather icons, or any dynamic images on your LED displays!
 
+> **💡 New to PixelMagicTool?** Check out the [FAQ](FAQ.md) for answers to common questions about connection requirements, performance, and setup!
+
 ## What This Does
 
 This integration provides **Home Assistant services** that can:
@@ -44,6 +46,27 @@ The traditional WLED JSON API (`/json/state` endpoint) is still supported:
 - 📋 More configuration options (patterns, segments, etc.)
 
 **Use the `send_to_wled` service for JSON API protocol.**
+
+### Connection Model: One-Shot vs. Streaming
+
+**PixelMagicTool uses a one-shot connection model** - this is different from continuous streaming tools like WLEDVideoSync:
+
+- 📡 **No Constant Connection Required** - Home Assistant connects to WLED only when sending an image
+- ⚡ **Quick Send & Close** - Connection is established, image is sent, then closed (typically <100ms)
+- 🎯 **Persistent Display** - Images remain on WLED until you send a new one or change WLED state
+- 🔄 **Automation Triggered** - Updates happen on-demand via automations, not continuous streaming
+- 💾 **Low Network Usage** - Only uses network bandwidth during actual image sends
+
+**Comparison with WLEDVideoSync:**
+
+| Aspect | PixelMagicTool | WLEDVideoSync |
+|--------|----------------|---------------|
+| Connection | One-shot per image | Continuous streaming |
+| Use Case | Static images via automations | Live video/screen casting |
+| HA Connection | Only during send | Maintained while streaming |
+| Best For | Album art, icons, snapshots | Real-time video content |
+
+> **💡 See [FAQ.md](FAQ.md) for detailed explanations** about connection requirements, network usage, and when to use each approach.
 
 ## Use Cases
 
@@ -565,6 +588,8 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 
 ## Troubleshooting
 
+> **💡 For comprehensive troubleshooting and FAQs**, see [FAQ.md](FAQ.md) which covers common questions about connections, performance, setup, and more.
+
 ### Integration Not Loading
 
 1. Check Home Assistant logs: Settings → System → Logs
@@ -673,6 +698,7 @@ data:
 
 ## Support & Contributing
 
+- **FAQ**: [Frequently Asked Questions](FAQ.md) - Start here for common questions
 - **Issues**: [GitHub Issues](https://github.com/iamjoshk/PixelMagicTool/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/iamjoshk/PixelMagicTool/discussions)
 - **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)

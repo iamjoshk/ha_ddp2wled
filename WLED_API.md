@@ -1,5 +1,7 @@
 # WLED JSON API Integration
 
+> **💡 For common questions about the JSON API and connection requirements**, see the [FAQ](FAQ.md).
+
 ## Overview
 
 This integration **already uses the WLED JSON API** to send converted images to your WLED devices. The `pixelmagictool.send_to_wled` service:
