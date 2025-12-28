@@ -34,6 +34,8 @@ The integration supports two protocols for sending images to WLED:
 - 🔄 **Real-time streaming** - Ideal for live updates and animations
 - 💪 **Better for large matrices** - Handles larger displays more efficiently
 
+Configure DDP the same way WLEDVideoSync documents it: in WLED open **Settings → Sync Interfaces** and keep **DDP enabled (port 4048)**, then set your panel size under **LED Preferences → 2D Configuration**. PixelMagicTool casts media the same way—use `send_to_wled_ddp` for one-shot casts and `start_streaming`/`send_frame`/`stop_streaming` for continuous casting.
+
 **Use the `send_to_wled_ddp` service for DDP protocol.**
 
 ### JSON API Protocol

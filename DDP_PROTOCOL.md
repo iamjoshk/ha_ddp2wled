@@ -209,11 +209,10 @@ nc -zvu <wled-ip> 4048
 
 ### WLED Configuration
 
-DDP is enabled by default in WLED. No configuration needed.
-
-You can verify DDP is working by:
-1. Settings → Sync Interfaces
-2. Check that "DDP" is not disabled
+Set up WLED the same way WLEDVideoSync documents for DDP:
+1. **Enable DDP**: Settings → Sync Interfaces → ensure "DDP" is enabled (port 4048).
+2. **Matrix size**: Settings → LED Preferences → 2D Configuration → set width/height to match your panel.
+3. **Live override**: Leave it disabled so DDP writes directly to the matrix (matches WLEDVideoSync casting defaults).
 
 ## Troubleshooting
 
@@ -223,15 +222,13 @@ You can verify DDP is working by:
 
 **Root Cause**: WLED enters temporary "realtime mode" when receiving DDP packets. When the packets stop, WLED exits realtime mode and reverts to the previous state. This is a safety feature to prevent stuck states if the controller crashes.
 
-**Solution**: This integration now automatically prepares the WLED device before sending DDP packets:
-1. Sends an HTTP API call to disable live override mode (`lor: 0`, `live: false`)
+**Solution**: By default the integration mirrors WLEDVideoSync and sends DDP directly without HTTP prep. If your device still falls back to the previous state, enable the optional `prepare_device` flag to make one HTTP call before streaming:
+1. Disables live override mode (`lor: 0`, `live: false`)
 2. Turns the segment on (`on: true`)
 3. Sets the segment to Solid effect (`fx: 0`) for individual LED control
 4. Marks the segment as selected/active (`sel: true`)
 
-This ensures that DDP updates persist as the actual LED state rather than a temporary realtime buffer. The fix is automatic - no configuration needed!
-
-**What Changed**: The fix was implemented based on research into WLEDVideoSync and WLED's JSON API documentation. Before sending DDP packets, the integration now sends a POST request to `/json/state` with the proper configuration to prepare the device.
+Use `prepare_device=True` only when you need that persistence fix; otherwise keep it off to stay aligned with WLEDVideoSync behavior.
 
 ### Image Not Displaying
 

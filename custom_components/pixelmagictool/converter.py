@@ -139,9 +139,10 @@ class PixelMagicToolAPI:
         the specified dimensions, converts it to RGB24 format, and sends it via 
         DDP protocol.
         
-        Before sending DDP packets, this method prepares the WLED device via HTTP API
-        to ensure the image persists on the display instead of reverting to the
-        previous state when streaming stops.
+        By default this matches the WLEDVideoSync behavior: DDP packets are sent
+        directly without any HTTP preparation. A `prepare_device` option is available
+        on lower-level calls for rare cases where you need WLED configured via HTTP
+        before streaming, but it is off by default.
         
         Args:
             image_source: URL (http://, https://) or local file path of the image

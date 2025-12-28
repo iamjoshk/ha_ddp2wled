@@ -51,7 +51,7 @@ data:
   session_id: "my_stream"
   wled_host: "192.168.1.100"
   segment_id: 0
-  prepare_device: true
+  prepare_device: false
 ```
 
 **Parameters:**
@@ -59,7 +59,7 @@ data:
 - `wled_host` (required): WLED device IP address
 - `segment_id` (optional): WLED segment ID (default: 0)
 - `timeout` (optional): Socket timeout in seconds (default: 10)
-- `prepare_device` (optional): Prepare WLED via HTTP API (default: true)
+- `prepare_device` (optional): Prepare WLED via HTTP API (default: false; matches WLEDVideoSync)
 
 ### 2. Send Frame to Session
 

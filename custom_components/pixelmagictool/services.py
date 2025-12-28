@@ -49,7 +49,7 @@ START_STREAMING_SCHEMA = vol.Schema(
         vol.Required(CONF_WLED_HOST): cv.string,
         vol.Optional("segment_id", default=0): cv.positive_int,
         vol.Optional("timeout", default=10): cv.positive_int,
-        vol.Optional("prepare_device", default=True): cv.boolean,
+        vol.Optional("prepare_device", default=False): cv.boolean,
     }
 )
 
