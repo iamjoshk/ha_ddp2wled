@@ -70,3 +70,117 @@ send_to_wled_ddp:
           min: 1
           max: 60
           mode: box
+
+start_streaming:
+  name: Start Continuous Streaming
+  description: Start a continuous streaming session to WLED. This opens a persistent connection that stays open for sending multiple frames, inspired by WLEDVideoSync's streaming model.
+  response:
+    optional: true
+  fields:
+    session_id:
+      name: Session ID
+      description: Unique identifier for this streaming session (used in send_frame and stop_streaming)
+      required: true
+      example: "spotify_album_art"
+      selector:
+        text:
+    wled_host:
+      name: WLED Host
+      description: IP address or hostname of WLED device
+      required: true
+      example: "192.168.1.100"
+      selector:
+        text:
+    segment_id:
+      name: Segment ID
+      description: WLED segment ID to target (default is 0)
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 31
+          mode: box
+    timeout:
+      name: Timeout
+      description: Socket timeout in seconds
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          mode: box
+    prepare_device:
+      name: Prepare Device
+      description: Whether to prepare WLED via HTTP API before streaming (recommended)
+      default: true
+      selector:
+        boolean:
+
+send_frame:
+  name: Send Frame to Streaming Session
+  description: Send a single frame to an active streaming session. Must be called after start_streaming. The connection remains open for sending more frames.
+  response:
+    optional: true
+  fields:
+    session_id:
+      name: Session ID
+      description: Session ID from start_streaming
+      required: true
+      example: "spotify_album_art"
+      selector:
+        text:
+    image_url:
+      name: Image URL
+      description: URL of the image to send (can be a template). Either image_url or image_path must be provided.
+      required: false
+      example: "{{ states.sensor.album_art.attributes.entity_picture }}"
+      selector:
+        text:
+    image_path:
+      name: Image Path
+      description: Local file path of the image to send. Either image_url or image_path must be provided.
+      required: false
+      example: "/config/www/frame.jpg"
+      selector:
+        text:
+    width:
+      name: Width
+      description: Target width in pixels
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    height:
+      name: Height
+      description: Target height in pixels
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 256
+          mode: box
+    brightness:
+      name: Brightness
+      description: LED brightness (0-255)
+      default: 255
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: slider
+
+stop_streaming:
+  name: Stop Continuous Streaming
+  description: Stop an active streaming session and close the connection. After calling this, you must call start_streaming again to resume.
+  response:
+    optional: true
+  fields:
+    session_id:
+      name: Session ID
+      description: Session ID from start_streaming
+      required: true
+      example: "spotify_album_art"
+      selector:
+        text:

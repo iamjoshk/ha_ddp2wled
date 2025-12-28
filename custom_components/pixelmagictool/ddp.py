@@ -25,7 +25,11 @@ DDP_MAX_PIXELS_PER_PACKET = 463  # Conservative estimate
 
 
 class DDPClient:
-    """Client for sending images to WLED via DDP protocol."""
+    """Client for sending images to WLED via DDP protocol.
+    
+    Supports both one-shot mode (send and close) and continuous streaming mode
+    (keep connection open for multiple frames).
+    """
 
     def __init__(self, host: str, port: int = DDP_PORT):
         """
@@ -38,6 +42,9 @@ class DDPClient:
         self.host = host
         self.port = port
         self.socket = None
+        self._streaming = False
+        self._sequence_num = 0
+        self._lock = asyncio.Lock()
 
     async def prepare_wled_for_ddp(
         self,
@@ -404,3 +411,210 @@ class DDPClient:
             raise
         finally:
             sock.close()
+
+    async def start_streaming(
+        self,
+        segment_id: int = 0,
+        timeout: int = 10,
+        prepare_device: bool = True,
+    ) -> bool:
+        """
+        Start a continuous streaming session to WLED.
+        
+        Opens a persistent UDP socket that remains open for sending multiple frames.
+        This implements the WLEDVideoSync continuous streaming model.
+        
+        Args:
+            segment_id: WLED segment ID (default: 0)
+            timeout: Socket timeout in seconds
+            prepare_device: Whether to prepare WLED via HTTP API before streaming
+            
+        Returns:
+            True if streaming session started successfully
+            
+        Raises:
+            RuntimeError: If a streaming session is already active
+            OSError: For network errors
+        """
+        async with self._lock:
+            if self._streaming:
+                raise RuntimeError(f"Streaming session already active for {self.host}:{self.port}")
+            
+            # Prepare WLED device if requested
+            if prepare_device:
+                _LOGGER.debug("Preparing WLED device for streaming session")
+                prep_success = await self.prepare_wled_for_ddp(segment_id, timeout=timeout)
+                if not prep_success:
+                    _LOGGER.warning(
+                        "Failed to prepare WLED device, continuing with streaming anyway"
+                    )
+            
+            # Open persistent UDP socket
+            try:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.socket.settimeout(timeout)
+                self._streaming = True
+                self._sequence_num = 0
+                
+                _LOGGER.info(
+                    "Started continuous streaming session to %s:%d",
+                    self.host, self.port
+                )
+                return True
+                
+            except OSError as err:
+                _LOGGER.error(
+                    "Failed to start streaming session to %s:%d: %s",
+                    self.host, self.port, err
+                )
+                if self.socket:
+                    self.socket.close()
+                    self.socket = None
+                raise
+
+    async def send_frame(
+        self,
+        rgb_data: bytes,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> bool:
+        """
+        Send a single frame to an active streaming session.
+        
+        Must be called after start_streaming(). The socket remains open after sending.
+        This implements the WLEDVideoSync continuous streaming model.
+        
+        Args:
+            rgb_data: RGB pixel data (R,G,B,R,G,B,...)
+            width: Optional image width (for logging)
+            height: Optional image height (for logging)
+            
+        Returns:
+            True if frame sent successfully
+            
+        Raises:
+            RuntimeError: If no streaming session is active
+            OSError: For network errors
+        """
+        async with self._lock:
+            if not self._streaming or self.socket is None:
+                raise RuntimeError(
+                    f"No active streaming session for {self.host}:{self.port}. "
+                    "Call start_streaming() first."
+                )
+            
+            num_pixels = len(rgb_data) // 3
+            
+            if width and height:
+                _LOGGER.debug(
+                    "Sending frame %d (%dx%d, %d pixels) to streaming session",
+                    self._sequence_num, width, height, num_pixels
+                )
+            else:
+                _LOGGER.debug(
+                    "Sending frame %d (%d pixels) to streaming session",
+                    self._sequence_num, num_pixels
+                )
+            
+            try:
+                # Split data into packets if needed
+                if num_pixels <= DDP_MAX_PIXELS_PER_PACKET:
+                    # Single packet
+                    packet = self._create_ddp_packet(
+                        rgb_data,
+                        offset=0,
+                        sequence=self._sequence_num & 0xFF,  # Wrap at 255
+                        push=True
+                    )
+                    self.socket.sendto(packet, (self.host, self.port))
+                else:
+                    # Multiple packets
+                    num_packets = (num_pixels + DDP_MAX_PIXELS_PER_PACKET - 1) // DDP_MAX_PIXELS_PER_PACKET
+                    
+                    for packet_idx in range(num_packets):
+                        start_pixel = packet_idx * DDP_MAX_PIXELS_PER_PACKET
+                        end_pixel = min((packet_idx + 1) * DDP_MAX_PIXELS_PER_PACKET, num_pixels)
+                        
+                        start_byte = start_pixel * 3
+                        end_byte = end_pixel * 3
+                        packet_data = rgb_data[start_byte:end_byte]
+                        
+                        push = (packet_idx == num_packets - 1)
+                        
+                        packet = self._create_ddp_packet(
+                            packet_data,
+                            offset=start_pixel,
+                            sequence=(self._sequence_num + packet_idx) & 0xFF,
+                            push=push,
+                        )
+                        
+                        self.socket.sendto(packet, (self.host, self.port))
+                        
+                        if packet_idx < num_packets - 1:
+                            await asyncio.sleep(0.001)
+                
+                # Increment sequence number for next frame
+                self._sequence_num += 1
+                return True
+                
+            except socket.timeout:
+                _LOGGER.error("Socket timeout sending frame to %s:%d", self.host, self.port)
+                raise OSError(f"Socket timeout sending frame to {self.host}:{self.port}")
+            except OSError as err:
+                _LOGGER.error(
+                    "Network error sending frame to %s:%d: %s",
+                    self.host, self.port, err
+                )
+                raise
+
+    async def stop_streaming(self) -> bool:
+        """
+        Stop the continuous streaming session and close the socket.
+        
+        This implements the WLEDVideoSync continuous streaming model.
+        After calling this, start_streaming() must be called again to resume.
+        
+        Returns:
+            True if streaming session stopped successfully
+        """
+        async with self._lock:
+            if not self._streaming:
+                _LOGGER.warning(
+                    "No active streaming session to stop for %s:%d",
+                    self.host, self.port
+                )
+                return False
+            
+            try:
+                if self.socket:
+                    self.socket.close()
+                    self.socket = None
+                
+                self._streaming = False
+                self._sequence_num = 0
+                
+                _LOGGER.info(
+                    "Stopped continuous streaming session to %s:%d",
+                    self.host, self.port
+                )
+                return True
+                
+            except Exception as err:
+                _LOGGER.error(
+                    "Error stopping streaming session to %s:%d: %s",
+                    self.host, self.port, err
+                )
+                # Ensure cleanup even on error
+                self.socket = None
+                self._streaming = False
+                self._sequence_num = 0
+                raise
+
+    def is_streaming(self) -> bool:
+        """
+        Check if a streaming session is currently active.
+        
+        Returns:
+            True if streaming session is active
+        """
+        return self._streaming
