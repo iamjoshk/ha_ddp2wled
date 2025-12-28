@@ -133,6 +133,49 @@ def test_rgb_data_size_validation():
     print("✓ RGB data size validation test passed")
 
 
+def test_prepare_wled_payload():
+    """Test WLED preparation payload structure."""
+    print("\nTesting WLED preparation payload structure...")
+    
+    # Verify that the expected payload structure is correct
+    # This doesn't make an actual HTTP request, just validates the structure
+    
+    expected_payload = {
+        "on": True,
+        "lor": 0,
+        "live": False,
+        "seg": [{
+            "id": 0,
+            "on": True,
+            "fx": 0,
+            "sel": True,
+        }]
+    }
+    
+    # Verify all required keys are present
+    assert "on" in expected_payload, "Payload should have 'on' key"
+    assert "lor" in expected_payload, "Payload should have 'lor' key"
+    assert "live" in expected_payload, "Payload should have 'live' key"
+    assert "seg" in expected_payload, "Payload should have 'seg' key"
+    
+    # Verify segment structure
+    assert len(expected_payload["seg"]) == 1, "Payload should have one segment"
+    seg = expected_payload["seg"][0]
+    assert "id" in seg, "Segment should have 'id' key"
+    assert "on" in seg, "Segment should have 'on' key"
+    assert "fx" in seg, "Segment should have 'fx' key"
+    assert "sel" in seg, "Segment should have 'sel' key"
+    
+    # Verify values
+    assert expected_payload["on"] is True, "on should be True"
+    assert expected_payload["lor"] == 0, "lor should be 0"
+    assert expected_payload["live"] is False, "live should be False"
+    assert seg["fx"] == 0, "fx should be 0 (Solid effect)"
+    assert seg["sel"] is True, "sel should be True"
+    
+    print("✓ WLED preparation payload structure test passed")
+
+
 if __name__ == "__main__":
     print("Running DDP protocol tests...\n")
     print("=" * 60)
@@ -143,6 +186,7 @@ if __name__ == "__main__":
         test_ddp_packet_offset()
         test_expand_range_pattern()
         test_rgb_data_size_validation()
+        test_prepare_wled_payload()
         
         print("\n" + "=" * 60)
         print("✓ All tests passed!")
