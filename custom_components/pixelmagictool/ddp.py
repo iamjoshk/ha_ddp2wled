@@ -135,7 +135,7 @@ class DDPClient:
         - Byte 2: Data type (0x0B for RGB24)
         - Byte 3: Destination ID
         - Bytes 4-7: Data offset in bytes (big-endian, 32-bit)
-        - Bytes 8-9: Data length (big-endian, 16-bit)
+        - Bytes 8-9: Data length (big-endian, 16-bit) — indexes 8 and 9 (no padding)
         
         Args:
             flags: Flags byte (version + push flag)
@@ -149,7 +149,7 @@ class DDPClient:
             10-byte header as bytes
         """
         # Pack header in network (big-endian) format matching upstream WLEDVideoSync.
-        # Format: !BBBBLH -> 4 bytes (BBBB) + 4 bytes (L) + 2 bytes (H) = 10 bytes total (the '!' prefix disables padding)
+        # Format: !BBBBLH -> bytes0-3 (BBBB), bytes4-7 (L: offset), bytes8-9 (H: length); 10 bytes total with '!' (no padding)
         return struct.pack("!BBBBLH", flags, sequence, data_type, dest_id, data_offset, data_length)
 
     def _create_ddp_packet(
@@ -290,12 +290,13 @@ class DDPClient:
                     )
                     
                     _LOGGER.debug(
-                        "Sending packet %d/%d to %s:%d (seq=%d offset=%d pixels %d-%d bytes=%d push=%s)",
+                        "Sending packet %d/%d to %s:%d (seq=%d pixel_offset=%d byte_offset=%d pixels %d-%d bytes=%d push=%s)",
                         packet_idx + 1,
                         num_packets,
                         self.host,
                         self.port,
                         packet_idx,
+                        start_pixel,
                         start_pixel * 3,
                         start_pixel,
                         end_pixel - 1,
