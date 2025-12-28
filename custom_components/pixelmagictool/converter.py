@@ -330,6 +330,50 @@ class PixelMagicToolAPI:
         
         return compressed_json
 
+    def create_colors_only_payload(
+        self,
+        wled_json: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Create a minimal WLED payload with only the color data.
+        
+        This reduces payload size by stripping unnecessary fields like 'on', 'bri',
+        'live', 'fx', 'sel', etc., and keeping only the essential color data in seg.i.
+        
+        Args:
+            wled_json: The full WLED JSON payload
+            
+        Returns:
+            Minimal WLED JSON with only seg.i (color data)
+        """
+        if "seg" not in wled_json or "i" not in wled_json["seg"]:
+            _LOGGER.warning("No segment color data found, returning original payload")
+            return wled_json
+        
+        # Extract segment ID if present (useful for targeting specific segment)
+        segment_id = wled_json["seg"].get("id", 0)
+        
+        # Create minimal payload with just colors
+        minimal_payload = {
+            "seg": {
+                "id": segment_id,
+                "i": wled_json["seg"]["i"]
+            }
+        }
+        
+        original_size = len(json.dumps(wled_json))
+        minimal_size = len(json.dumps(minimal_payload))
+        reduction_percent = (1 - minimal_size / original_size) * 100 if original_size > 0 else 0
+        
+        _LOGGER.info(
+            "Created colors-only payload: %d -> %d bytes (%.1f%% reduction)",
+            original_size,
+            minimal_size,
+            reduction_percent
+        )
+        
+        return minimal_payload
+
     async def send_to_wled(
         self,
         wled_host: str,
@@ -338,6 +382,7 @@ class PixelMagicToolAPI:
         session: aiohttp.ClientSession | None = None,
         use_chunks: bool = False,
         chunk_size: int = 256,
+        colors_only: bool = False,
     ) -> bool:
         """
         Send WLED JSON to a WLED device.
@@ -349,6 +394,7 @@ class PixelMagicToolAPI:
             session: Optional aiohttp session
             use_chunks: Split large payloads into multiple smaller requests
             chunk_size: Number of LEDs per chunk (WLED recommends 256)
+            colors_only: Send minimal payload with only color data (reduces size)
             
         Returns:
             True if successful
@@ -364,6 +410,12 @@ class PixelMagicToolAPI:
             close_session = True
 
         try:
+            # Create colors-only payload if requested
+            # Note: colors_only mode is compatible with chunked sending since both
+            # operations work on the same seg.i data structure
+            if colors_only:
+                wled_json = self.create_colors_only_payload(wled_json)
+            
             # Calculate payload size for logging
             payload_size = len(json.dumps(wled_json))
             _LOGGER.debug("Sending to WLED at %s (payload size: %d bytes)", f"http://{wled_host}/json/state", payload_size)
