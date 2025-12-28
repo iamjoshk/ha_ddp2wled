@@ -586,6 +586,25 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 - For HUB75 panels, ensure 2D configuration is set up correctly in WLED
 - **For WLED-MM (MoonModules) devices**: See special considerations below
 
+### DDP Protocol Issues
+
+**LEDs Turn Off/Freeze Then Resume Previous Settings (FIXED)**
+
+This issue has been fixed! The integration now automatically prepares WLED before sending DDP packets. If you're still experiencing this:
+
+1. **Verify the fix is active**: Check that you're using the latest version of this integration
+2. **Check WLED logs**: Look for any errors related to DDP on port 4048
+3. **Test with simple image**: Try a solid color image first: `https://via.placeholder.com/32x32/FF0000/FF0000.png`
+4. **Verify network**: Ensure UDP port 4048 is accessible: `nc -zvu <wled-ip> 4048`
+
+**The fix works by:**
+- Sending HTTP API call to disable live override mode before DDP packets
+- Setting the segment to Solid effect (fx=0) for individual LED control
+- Marking the segment as selected/active
+- This ensures DDP updates persist instead of reverting to previous state
+
+For more DDP troubleshooting, see [DDP_PROTOCOL.md](DDP_PROTOCOL.md).
+
 ### WLED-MM (MoonModules) Compatibility
 
 If you're running **WLED-MM** (MoonModules fork) instead of stable WLED, you may encounter loading or freezing issues due to limited RAM on ESP32 devices. WLED-MM has the same JSON API but stricter memory constraints.
