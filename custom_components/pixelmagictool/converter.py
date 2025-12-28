@@ -384,7 +384,8 @@ class PixelMagicToolAPI:
         timeout: int = 10,
         session: aiohttp.ClientSession | None = None,
         use_chunks: bool = False,
-        chunk_size: int = 256,
+        chunk_size: int = 128,
+        chunk_delay: float = 0.15,
         colors_only: bool = False,
     ) -> bool:
         """
@@ -396,7 +397,8 @@ class PixelMagicToolAPI:
             timeout: Request timeout in seconds
             session: Optional aiohttp session
             use_chunks: Split large payloads into multiple smaller requests
-            chunk_size: Number of LEDs per chunk (WLED recommends 256)
+            chunk_size: Number of LEDs per chunk (default 128 for WLED-MM compatibility)
+            chunk_delay: Delay in seconds between chunks (default 0.15s for stability)
             colors_only: Send minimal payload with only color data (reduces size)
             
         Returns:
@@ -427,7 +429,7 @@ class PixelMagicToolAPI:
             if use_chunks and payload_size > 15000:  # 15KB threshold for chunking
                 _LOGGER.info("Using chunked sending due to large payload size (%d bytes)", payload_size)
                 return await self._send_to_wled_chunked(
-                    wled_host, wled_json, chunk_size, timeout, session
+                    wled_host, wled_json, chunk_size, chunk_delay, timeout, session
                 )
             
             # Send as single request
@@ -506,6 +508,7 @@ class PixelMagicToolAPI:
         wled_host: str,
         wled_json: dict[str, Any],
         chunk_size: int,
+        chunk_delay: float,
         timeout: int,
         session: aiohttp.ClientSession,
     ) -> bool:
@@ -520,6 +523,9 @@ class PixelMagicToolAPI:
         API calls of 256 colors at a time. Do not make several calls in parallel, that is 
         not optimal for the device. Instead make your call in sequence, where each call 
         waits for the previous to complete before making a new one."
+        
+        For WLED-MM (MoonModules) devices with limited RAM, using smaller chunk sizes
+        (e.g., 128 LEDs) and longer delays (e.g., 150ms) improves stability.
         """
         url = f"http://{wled_host}/json/state"
         
@@ -625,10 +631,11 @@ class PixelMagicToolAPI:
                                      chunk_idx + 1, response_data)
                         return False
                     
-                    # Small delay between chunks to avoid overwhelming the device
+                    # Configurable delay between chunks to avoid overwhelming the device
                     # WLED documentation recommends waiting for each call to complete before sending the next
+                    # WLED-MM may need longer delays due to limited RAM on ESP32 devices
                     if chunk_idx < len(chunks) - 1:
-                        await asyncio.sleep(0.1)  # 100ms delay between chunks
+                        await asyncio.sleep(chunk_delay)
             
             _LOGGER.info("Successfully sent all %d chunks to WLED device", len(chunks))
             return True

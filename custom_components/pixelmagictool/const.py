@@ -20,6 +20,7 @@ CONF_COMPRESSION = "compression"
 CONF_COMPRESSION_LEVEL = "compression_level"
 CONF_USE_CHUNKS = "use_chunks"
 CONF_CHUNK_SIZE = "chunk_size"
+CONF_CHUNK_DELAY = "chunk_delay"
 CONF_COLORS_ONLY = "colors_only"
 CONF_PROTOCOL = "protocol"
 
@@ -33,7 +34,8 @@ DEFAULT_API_URL = "https://pixelmagictool.vercel.app/api/wled/image"
 DEFAULT_COMPRESSION = False
 DEFAULT_COMPRESSION_LEVEL = 5
 DEFAULT_USE_CHUNKS = False
-DEFAULT_CHUNK_SIZE = 256  # Number of LEDs per chunk (WLED recommended)
+DEFAULT_CHUNK_SIZE = 128  # Conservative size for WLED-MM compatibility (was 256)
+DEFAULT_CHUNK_DELAY = 0.15  # Delay in seconds between chunks (150ms for better stability)
 DEFAULT_COLORS_ONLY = False
 DEFAULT_PROTOCOL = "json"
 

@@ -17,20 +17,30 @@ All notable changes to this project will be documented in this file.
 - Comprehensive documentation for DDP protocol
 - Test suite for DDP implementation
 - Comparison guide for choosing between DDP and JSON API protocols
+- WLED JSON now stored in Last Conversion sensor's `wled_json` attribute for easy access in automations
+- WLED-MM (MoonModules) compatibility improvements:
+  - Added `chunk_delay` parameter to control delay between chunks (default 0.15s)
+  - Reduced default `chunk_size` from 256 to 128 LEDs for better WLED-MM compatibility
+  - Configurable chunk delay range: 0.05s to 2.0s
+  - Enhanced documentation with WLED-MM troubleshooting guide
+  - Added example configurations optimized for WLED-MM devices
 
 ### Changed
 - Updated manifest.json to version 1.1.0
 - Added Pillow (PIL) as a dependency
 - Enhanced README with DDP protocol information and usage examples
 - Updated service definitions with DDP protocol options
+- Default chunk size changed from 256 to 128 LEDs for improved compatibility with WLED-MM devices
+- Chunk delay is now configurable (was fixed at 0.1s, now default 0.15s)
+- Updated documentation to explicitly mention WLED-MM (MoonModules) compatibility
 
 ### Fixed
-- WLED JSON now stored in Last Conversion sensor's `wled_json` attribute for easy access in automations
 - Fixed issue where WLED JSON shows in web UI preview but device doesn't update
   - Automatically sets `fx=0` (Solid effect) for individual LED control
   - Automatically sets `sel=true` to mark segment as active
   - Automatically sets `live=false` to disable live override mode
   - Applies to both single and chunked payload sending
+- Improved stability for WLED-MM devices by using more conservative chunking defaults
 
 ### Migration Notes
 - **Recommended**: Switch from `send_to_wled` to `send_to_wled_ddp` for better performance

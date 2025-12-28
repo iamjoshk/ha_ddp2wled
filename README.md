@@ -100,6 +100,8 @@ The integration creates a sensor `sensor.pixel_magic_tool_last_conversion` that 
 
 **👉 See [WLED_API.md](WLED_API.md) for details on the WLED JSON API integration!**
 
+**👉 See [WLED_MM.md](WLED_MM.md) for WLED-MM (MoonModules) compatibility guide!**
+
 **👉 See [EXAMPLES.md](EXAMPLES.md) for complete automation examples!**
 
 **👉 See [JSON_FORMAT.md](JSON_FORMAT.md) for JSON format specifications and validation!**
@@ -193,7 +195,8 @@ automation:
           compression: true
           compression_level: 7
           use_chunks: true
-          chunk_size: 256  # WLED recommended chunk size
+          chunk_size: 128  # Conservative size for WLED-MM (use 256 for standard WLED)
+          chunk_delay: 0.15  # Delay between chunks (increase for WLED-MM if needed)
 ```
 
 ### Example 4: Minimal Payload with Colors Only
@@ -373,7 +376,8 @@ Same as `convert_image` plus:
 | `wled_host` | Yes | - | IP address or hostname of WLED device |
 | `timeout` | No | 10 | Request timeout in seconds |
 | `use_chunks` | No | false | Split large payloads into multiple sequential requests |
-| `chunk_size` | No | 256 | Number of LEDs per chunk (WLED recommends 256) |
+| `chunk_size` | No | 128 | Number of LEDs per chunk (128 for WLED-MM, standard WLED can use 256) |
+| `chunk_delay` | No | 0.15 | Delay in seconds between chunks (0.15s for stability, increase for WLED-MM) |
 | `colors_only` | No | false | Send minimal payload with only color data (reduces size by ~40-60 bytes) |
 
 **Service Response:**
@@ -469,13 +473,15 @@ For HUB75 panels, **Range** pattern typically provides the best balance of size 
 - **Transparent Backgrounds**: Specify a color to replace transparency
 - **Compression**: Enable compression for large images to reduce payload size. Start with level 5 and adjust as needed.
 - **Colors-Only Mode**: Enable `colors_only: true` to send minimal payloads with just the color data, reducing overhead by ~40-60 bytes. This is useful when every byte counts, though it omits some WLED parameters (fx, sel, on, bri, live) and WLED will use default or existing values for these fields.
-- **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially. WLED documentation recommends sending chunks of 256 colors at a time, waiting for each request to complete before sending the next.
-- **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. If you get "Payload too large" errors:
+- **Chunked Sending**: For very large images that still exceed WLED's limits even with compression, enable `use_chunks: true` to split the payload into multiple smaller requests sent sequentially. Default chunk size is 128 LEDs for WLED-MM compatibility (standard WLED can use up to 256).
+- **WLED-MM Devices**: If using WLED-MM (MoonModules), use smaller chunks (128 or 64) and longer delays (0.2s or more) due to limited ESP32 RAM. See troubleshooting section for details.
+- **Payload Size Limits**: WLED devices typically have a limit of ~20-30KB for JSON payloads. WLED-MM devices may have tighter limits due to limited RAM on ESP32. If you get "Payload too large" errors:
   - **Best solution**: Switch to DDP protocol with `send_to_wled_ddp` service
   - Enable colors-only mode with `colors_only: true` (saves ~40-60 bytes overhead)
   - Enable chunked sending with `use_chunks: true` (recommended for payloads > 15KB)
   - Enable compression with `compression: true` and adjust `compression_level` (1-10)
-  - Adjust `chunk_size` (default 256 LEDs per WLED recommendation) - smaller values = more requests but better compatibility
+  - Adjust `chunk_size` (default 128 for WLED-MM, 256 for standard WLED) - smaller values = more requests but better compatibility
+  - Adjust `chunk_delay` (default 0.15s, increase to 0.2-0.5s for WLED-MM stability)
   - Reduce image dimensions (e.g., use 16x16 or 24x24 instead of 32x32)
   - Try the "range" pattern type (most efficient)
 
@@ -578,6 +584,39 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 - Try different pattern types (range, index, individual)
 - Verify your WLED version supports JSON state API
 - For HUB75 panels, ensure 2D configuration is set up correctly in WLED
+- **For WLED-MM (MoonModules) devices**: See special considerations below
+
+### WLED-MM (MoonModules) Compatibility
+
+If you're running **WLED-MM** (MoonModules fork) instead of stable WLED, you may encounter loading or freezing issues due to limited RAM on ESP32 devices. WLED-MM has the same JSON API but stricter memory constraints.
+
+**Solutions for WLED-MM devices:**
+- **Enable chunked sending**: Set `use_chunks: true` to split payloads into smaller requests
+- **Use smaller chunk size**: Set `chunk_size: 128` or even `chunk_size: 64` for very constrained devices (default is 128)
+- **Increase chunk delay**: Set `chunk_delay: 0.2` or higher (default is 0.15s) to give the device more time between chunks
+- **Enable compression**: Set `compression: true` to reduce payload size before chunking
+- **Use colors-only mode**: Set `colors_only: true` to minimize overhead
+- **Reduce image dimensions**: Use smaller images (16x16 or 24x24 instead of 32x32)
+- **Use range pattern**: The "range" pattern is most memory-efficient
+
+**Example for WLED-MM devices:**
+```yaml
+service: pixelmagictool.send_to_wled
+data:
+  image_url: "{{ state_attr('media_player.spotify', 'entity_picture') }}"
+  wled_host: "192.168.1.100"
+  width: 32
+  height: 32
+  brightness: 128
+  pattern: "range"
+  segment_id: 0
+  use_chunks: true
+  chunk_size: 128        # Smaller chunks for WLED-MM
+  chunk_delay: 0.2       # Longer delay for stability
+  compression: true      # Enable compression
+  compression_level: 5
+  colors_only: true      # Minimal payload
+```
 
 ### Sensor Not Updating
 
@@ -588,9 +627,11 @@ See [DOCS.md](DOCS.md) for more detailed documentation about the web interface (
 ## Requirements
 
 - Home Assistant 2023.3.0 or newer
-- WLED device with 2D Matrix or HUB75 configuration
+- WLED device with 2D Matrix or HUB75 configuration (supports both stable WLED and WLED-MM/MoonModules)
 - Network access to both your WLED device and pixelmagictool.vercel.app
 - For media player integration: Media player that provides `entity_picture` attribute
+
+**Note**: This integration is compatible with both stable WLED and WLED-MM (MoonModules fork). For WLED-MM devices, use the chunked sending options with smaller chunk sizes and longer delays for best results.
 
 ## Credits & Acknowledgments
 

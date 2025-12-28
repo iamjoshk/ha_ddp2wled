@@ -25,6 +25,7 @@ from .const import (
     CONF_API_URL,
     CONF_USE_CHUNKS,
     CONF_CHUNK_SIZE,
+    CONF_CHUNK_DELAY,
     CONF_COLORS_ONLY,
     DEFAULT_BRIGHTNESS,
     DEFAULT_COMPRESSION,
@@ -36,6 +37,7 @@ from .const import (
     DEFAULT_API_URL,
     DEFAULT_USE_CHUNKS,
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_CHUNK_DELAY,
     DEFAULT_COLORS_ONLY,
     DOMAIN,
     PATTERNS,
@@ -72,6 +74,9 @@ SEND_TO_WLED_SCHEMA = CONVERT_IMAGE_SCHEMA.extend(
         vol.Optional("timeout", default=10): cv.positive_int,
         vol.Optional(CONF_USE_CHUNKS, default=DEFAULT_USE_CHUNKS): cv.boolean,
         vol.Optional(CONF_CHUNK_SIZE, default=DEFAULT_CHUNK_SIZE): cv.positive_int,
+        vol.Optional(CONF_CHUNK_DELAY, default=DEFAULT_CHUNK_DELAY): vol.All(
+            vol.Coerce(float), vol.Range(min=0.05, max=2.0)
+        ),
         vol.Optional(CONF_COLORS_ONLY, default=DEFAULT_COLORS_ONLY): cv.boolean,
     }
 )
@@ -209,6 +214,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     timeout=timeout_seconds,
                     use_chunks=call.data.get(CONF_USE_CHUNKS, DEFAULT_USE_CHUNKS),
                     chunk_size=call.data.get(CONF_CHUNK_SIZE, DEFAULT_CHUNK_SIZE),
+                    chunk_delay=call.data.get(CONF_CHUNK_DELAY, DEFAULT_CHUNK_DELAY),
                     colors_only=call.data.get(CONF_COLORS_ONLY, DEFAULT_COLORS_ONLY),
                 )
             except ValueError as err:
