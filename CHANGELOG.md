@@ -47,6 +47,9 @@ All notable changes to this project will be documented in this file.
 - DDP service requires `width` and `height` parameters (no defaults)
 - DDP uses brightness 0-255 (255 = full brightness)
 - Existing `send_to_wled` and `convert_image` services remain unchanged for backward compatibility
+  - Automatically sets `live=false` to disable live override mode (was `liv`, now `live`)
+  - Applies to both single and chunked payload sending
+- Improved stability for WLED-MM devices by using more conservative chunking defaults
 
 ## [1.0.0] - 2025-12-27
 
