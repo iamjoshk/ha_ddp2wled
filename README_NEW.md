@@ -5,6 +5,8 @@
 
 A Home Assistant custom integration for sending images to WLED devices via DDP (Distributed Display Protocol). Perfect for displaying album art, camera snapshots, or any dynamic images on LED matrices like the Apollo M-1 running MM-WLED.
 
+> **Note**: This is a **service-only integration** - it does not create entities. You interact with it through service calls. See [Troubleshooting](TROUBLESHOOTING.md) for more information.
+
 ## What This Does
 
 This integration provides a **simple and reliable service** to send images directly to WLED devices using the DDP protocol - the same method used by [WLEDVideoSync](https://github.com/zak-45/WLEDVideoSync).
@@ -186,7 +188,11 @@ The service returns:
 
 ### Display Resets to Solid Color
 
-This issue has been fixed in version 2.0.0. Make sure you're running the latest version.
+This issue has been fixed in version 2.0.0+. The integration now sends DDP packets directly without HTTP API preparation, matching WLEDVideoSync web UI behavior.
+
+### No Entities Created / No Debug Logging
+
+This is normal - the integration is service-only and doesn't create entities. For detailed troubleshooting including how to enable debug logging, see the **[Troubleshooting Guide](TROUBLESHOOTING.md)**.
 
 ### Performance Issues
 
