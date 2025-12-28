@@ -205,12 +205,22 @@ send_to_wled:
         boolean:
     chunk_size:
       name: Chunk Size
-      description: Number of LEDs per chunk when using chunked sending (WLED recommends 256 colors per request)
-      default: 256
+      description: Number of LEDs per chunk when using chunked sending (default 128 for WLED-MM compatibility, standard WLED can use up to 256)
+      default: 128
       selector:
         number:
           min: 64
           max: 2048
+          mode: box
+    chunk_delay:
+      name: Chunk Delay
+      description: Delay in seconds between chunks (default 0.15s, increase for WLED-MM stability). Range 0.05-2.0 seconds.
+      default: 0.15
+      selector:
+        number:
+          min: 0.05
+          max: 2.0
+          step: 0.05
           mode: box
     colors_only:
       name: Colors Only Mode
