@@ -1055,6 +1055,9 @@
     async function insert(data, isAnimated = false, delay = 5000) {
       const urlPreset = `${WLED_URL}/presets.json`;
       const url = `${WLED_URL}/json`;
+      
+      // ESP32 safe limit for preset saving (presets cannot be chunked)
+      const ESP32_SAFE_PRESET_LIMIT = 15000; // 15KB is a safe limit for most ESP32 devices
 
       let requestsCompleted = 0;
 
@@ -1080,28 +1083,68 @@
               const jsonBody = JSON.stringify(body);
               const bodySize = new Blob([jsonBody]).size;
               
+              // Check if preset size exceeds ESP32 safe limits
+              if (bodySize > ESP32_SAFE_PRESET_LIMIT) {
+                console.error(`Preset "${item.n}" too large: ${(bodySize/1024).toFixed(1)}KB exceeds ${(ESP32_SAFE_PRESET_LIMIT/1024).toFixed(1)}KB limit`);
+                toast(
+                  `⚠️ Preset "${item.n}" is too large (${(bodySize/1024).toFixed(1)}KB) and may freeze your ESP32! ` +
+                  `WLED presets cannot be chunked. Please: ` +
+                  `1) Enable compression, 2) Reduce image size, or 3) Use "Simulate" button instead (supports chunking).`,
+                  "error",
+                  10000
+                );
+                resolve();
+                return;
+              }
+              
+              // Warn if getting close to limit
+              if (bodySize > ESP32_SAFE_PRESET_LIMIT * 0.8) {
+                toast(
+                  `⚠️ Warning: Preset "${item.n}" is large (${(bodySize/1024).toFixed(1)}KB). May cause ESP32 issues. Consider enabling compression.`,
+                  "warning",
+                  5000
+                );
+              }
+              
+              // Add timeout to detect if ESP32 freezes during save
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+              
               const options = {
                 method: "POST",
                 body: jsonBody,
                 headers: {
                   "Content-Type": "application/json"
-                }
+                },
+                signal: controller.signal
               };
 
               try {
                 const response = await fetch(url, options);
                 
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
                   const errorText = await response.text();
                   console.error(`Preset save error (${response.status}):`, errorText);
-                  toast(`Error saving preset: HTTP ${response.status}`, "error");
+                  
+                  if (response.status === 413 || errorText.includes("too large")) {
+                    toast(
+                      `Preset "${item.n}" rejected - too large for ESP32. ` +
+                      `Enable compression or use "Simulate" button instead.`,
+                      "error",
+                      8000
+                    );
+                  } else {
+                    toast(`Error saving preset: HTTP ${response.status}`, "error");
+                  }
                   return;
                 }
                 
                 const { success } = await response.json();
 
                 if (success) {
-                  toast(`Preset "${item.n}" save successfully`);
+                  toast(`Preset "${item.n}" saved successfully`);
                   window.parent.postMessage("loadPresets", WLED_URL);
                 } else {
                   console.error("Preset save failed:", body);
@@ -1109,7 +1152,17 @@
                 }
               } catch (error) {
                 console.error("Network error saving preset:", error);
-                toast(`Error saving preset: ${error.message}`, "error");
+                
+                if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+                  toast(
+                    `Timeout saving preset "${item.n}". ESP32 may have frozen due to large payload. ` +
+                    `Try: 1) Power cycle ESP32, 2) Enable compression, 3) Use smaller image, 4) Use "Simulate" instead.`,
+                    "error",
+                    10000
+                  );
+                } else {
+                  toast(`Error saving preset: ${error.message}`, "error");
+                }
               }
             } catch (error) {
               toast(error, "error");
@@ -1613,7 +1666,10 @@
             seg: {
               id,
               i,
+              fx: 0,     // Effect ID 0 = Solid (required for individual LED control)
+              sel: true  // Mark segment as selected/active
             },
+            live: false  // Disable live mode to ensure updates are applied
           });
 
           resolve();
@@ -2368,25 +2424,41 @@
         const isLastChunk = i === chunks.length - 1;
         progressText.textContent = `Sending chunk ${i + 1} of ${chunks.length}${isLastChunk ? ' (final chunk)' : ''}...`;
         
+        // Build payload - critical WLED parameters for proper LED control
         const payload = {
-          on: true,
-          bri: brightness,
           seg: {
             id: segmentId,
-            i: chunks[i]
-          }
+            i: chunks[i],
+            fx: 0,     // Effect ID 0 = Solid (required for individual LED control)
+            sel: true  // Mark segment as selected/active
+          },
+          live: false  // Disable live mode to ensure updates are applied
         };
+        
+        // Only include on/brightness in first chunk to avoid repeated state changes
+        // that can overwhelm the ESP32
+        if (i === 0) {
+          payload.on = true;
+          payload.bri = brightness;
+        }
         
         const jsonString = JSON.stringify(payload);
         
         try {
+          // Add timeout to detect ESP32 freezing
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
           const response = await fetch(url, {
             method: "POST",
             body: jsonString,
             headers: {
               "Content-Type": "application/json",
-            }
+            },
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           if (!response.ok) {
             const errorText = await response.text();
@@ -2405,19 +2477,21 @@
             throw new Error(`Chunk ${i + 1} was rejected by WLED`);
           }
           
-          // Small delay between chunks to avoid overwhelming the device
+          // Longer delay between chunks to give ESP32 time to process and write to LEDs
+          // 100ms was too short and could cause the ESP32 to freeze
           if (i < chunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 250));
           }
           
         } catch (error) {
           progressIndicator.classList.remove("show");
+          
+          if (error.name === 'AbortError') {
+            throw new Error(`Chunk ${i + 1} timed out. ESP32 may have frozen. Try power cycling the device or reducing chunk size/image dimensions.`);
+          }
           throw error;
         }
       }
-      
-      // REMOVED: First chunk resend operation that was overwriting later chunks
-      // The chunking now properly handles all data without needing to resend
       
       progressIndicator.classList.remove("show");
       return true;
