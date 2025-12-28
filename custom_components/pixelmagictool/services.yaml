@@ -111,8 +111,8 @@ start_streaming:
           mode: box
     prepare_device:
       name: Prepare Device
-      description: Whether to prepare WLED via HTTP API before streaming (recommended)
-      default: true
+      description: Whether to prepare WLED via HTTP API before streaming (leave off to match WLEDVideoSync)
+      default: false
       selector:
         boolean:
 

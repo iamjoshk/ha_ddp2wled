@@ -253,9 +253,7 @@ If you're still experiencing issues:
 
 In most cases, you should NOT need to enable HTTP API preparation. However, if you have specific requirements:
 
-**Note**: The `prepare_device` parameter is not exposed in the service schema by default. It can only be set programmatically in custom components or scripts that call the underlying API directly.
-
-The default behavior (`prepare_device=False`) matches WLEDVideoSync web UI and works correctly for the vast majority of WLED devices.
+**Note**: The streaming service exposes `prepare_device` but defaults it to `False` to mirror WLEDVideoSync. Only turn it on if your device reverts to its old state after a stream.
 
 ### Continuous Streaming Mode
 
