@@ -19,8 +19,13 @@ class PixelMagicToolAPI:
     """Client for sending images to WLED via DDP protocol."""
 
     def __init__(self, api_url: str = None):
-        """Initialize the API client."""
-        # api_url is ignored but kept for backwards compatibility
+        """
+        Initialize the DDP client.
+        
+        Args:
+            api_url: Ignored parameter kept for backwards compatibility.
+                    This class only uses DDP protocol and doesn't need an API URL.
+        """
         pass
 
     def _validate_image_data(self, image_data: bytes, source: str) -> None:

@@ -2,7 +2,8 @@
 import sys
 import os
 
-# Add the custom_components directory to the path
+# Add the custom_components directory to the path for standalone testing
+# Note: In production, this would be imported via Home Assistant's plugin system
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'custom_components', 'pixelmagictool'))
 
 from converter import PixelMagicToolAPI
