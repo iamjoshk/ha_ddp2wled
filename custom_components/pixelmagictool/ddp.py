@@ -5,7 +5,6 @@ import asyncio
 import logging
 import socket
 import struct
-from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,9 +70,9 @@ class DDPClient:
             10-byte header as bytes
         """
         # Pack header in big-endian format
-        # Format: BBBB HH H H
-        # B = unsigned char (1 byte)
-        # H = unsigned short (2 bytes)
+        # Format: >BBBBHHH
+        # B = unsigned char (1 byte) x4
+        # H = unsigned short (2 bytes) x3
         header = struct.pack(
             ">BBBBHHH",
             flags,
