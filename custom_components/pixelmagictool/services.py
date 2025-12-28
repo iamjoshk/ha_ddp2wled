@@ -83,7 +83,8 @@ SEND_TO_WLED_SCHEMA = CONVERT_IMAGE_SCHEMA.extend(
 
 SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
     {
-        vol.Required("image_url"): cv.template,
+        vol.Optional("image_url"): cv.template,
+        vol.Optional("image_path"): cv.template,
         vol.Required(CONF_WLED_HOST): cv.string,
         vol.Required(CONF_WIDTH): cv.positive_int,
         vol.Required(CONF_HEIGHT): cv.positive_int,
@@ -270,12 +271,26 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def handle_send_to_wled_ddp(call: ServiceCall) -> dict[str, Any]:
         """Handle the send_to_wled_ddp service call."""
         try:
-            # Render template if needed
-            image_url_template = call.data["image_url"]
-            if isinstance(image_url_template, template.Template):
-                image_url = image_url_template.async_render(parse_result=False)
+            # Check that either image_url or image_path is provided
+            if "image_url" not in call.data and "image_path" not in call.data:
+                raise ValueError("Either 'image_url' or 'image_path' must be provided")
+            
+            if "image_url" in call.data and "image_path" in call.data:
+                raise ValueError("Cannot specify both 'image_url' and 'image_path'. Please provide only one.")
+            
+            # Get the image source (URL or path)
+            if "image_url" in call.data:
+                image_source_template = call.data["image_url"]
+                source_type = "url"
             else:
-                image_url = image_url_template
+                image_source_template = call.data["image_path"]
+                source_type = "path"
+            
+            # Render template if needed
+            if isinstance(image_source_template, template.Template):
+                image_source = image_source_template.async_render(parse_result=False)
+            else:
+                image_source = image_source_template
 
             wled_host = call.data[CONF_WLED_HOST]
             timeout_seconds = call.data["timeout"]
@@ -283,7 +298,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             height = call.data[CONF_HEIGHT]
             brightness = call.data[CONF_BRIGHTNESS]
 
-            _LOGGER.info("Sending image to WLED via DDP at %s", wled_host)
+            _LOGGER.info("Sending image to WLED via DDP at %s (source: %s)", wled_host, source_type)
 
             # Create API client
             api = PixelMagicToolAPI()
@@ -291,7 +306,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Send image via DDP
             try:
                 success = await api.send_image_via_ddp(
-                    image_url=image_url,
+                    image_source=image_source,
                     wled_host=wled_host,
                     width=width,
                     height=height,
@@ -302,7 +317,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("Failed to process image: %s", err)
                 return {
                     "success": False,
-                    "image_url": image_url,
+                    "image_source": image_source,
+                    "source_type": source_type,
+                    "wled_host": wled_host,
+                    "error": str(err),
+                }
+            except FileNotFoundError as err:
+                _LOGGER.error("Image file not found: %s", err)
+                return {
+                    "success": False,
+                    "image_source": image_source,
+                    "source_type": source_type,
                     "wled_host": wled_host,
                     "error": str(err),
                 }
@@ -310,7 +335,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("Network error sending DDP: %s", err)
                 return {
                     "success": False,
-                    "image_url": image_url,
+                    "image_source": image_source,
+                    "source_type": source_type,
                     "wled_host": wled_host,
                     "error": str(err),
                 }
@@ -322,7 +348,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 hass.bus.async_fire(
                     f"{DOMAIN}_sent_to_wled_ddp",
                     {
-                        "image_url": image_url,
+                        "image_source": image_source,
+                        "source_type": source_type,
                         "wled_host": wled_host,
                         "width": width,
                         "height": height,
@@ -333,7 +360,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 # Return result as service response
                 return {
                     "success": True,
-                    "image_url": image_url,
+                    "image_source": image_source,
+                    "source_type": source_type,
                     "wled_host": wled_host,
                     "protocol": "ddp",
                     "width": width,
@@ -344,7 +372,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("Failed to send to WLED via DDP")
                 return {
                     "success": False,
-                    "image_url": image_url,
+                    "image_source": image_source,
+                    "source_type": source_type,
                     "wled_host": wled_host,
                     "error": "Failed to send to WLED via DDP",
                 }

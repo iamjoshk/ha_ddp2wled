@@ -682,9 +682,83 @@ class PixelMagicToolAPI:
         
         return expanded
 
+    async def _load_image_data(
+        self,
+        image_source: str,
+        session: aiohttp.ClientSession | None = None,
+    ) -> bytes:
+        """
+        Load image data from either a URL or local file path.
+        
+        Args:
+            image_source: URL (http:// or https://) or local file path
+            session: Optional aiohttp session (only used for URLs)
+            
+        Returns:
+            Image data as bytes
+            
+        Raises:
+            ValueError: If image source is invalid or cannot be loaded
+            FileNotFoundError: If local file doesn't exist
+        """
+        # Check if it's a URL or local file path
+        if image_source.startswith(('http://', 'https://')):
+            # Load from URL
+            _LOGGER.debug("Loading image from URL: %s", image_source)
+            
+            close_session = False
+            if session is None:
+                session = aiohttp.ClientSession()
+                close_session = True
+            
+            try:
+                async with session.get(image_source) as response:
+                    response.raise_for_status()
+                    image_data = await response.read()
+                    
+                    if not image_data or len(image_data) == 0:
+                        _LOGGER.error("Downloaded image data is empty from URL: %s", image_source)
+                        raise ValueError("Downloaded image data is empty. Please check the image URL.")
+                    
+                    return image_data
+            finally:
+                if close_session:
+                    await session.close()
+        else:
+            # Load from local file path
+            _LOGGER.debug("Loading image from local file: %s", image_source)
+            
+            try:
+                # Use asyncio to read file without blocking
+                import os
+                import asyncio
+                
+                # Check if file exists
+                if not os.path.exists(image_source):
+                    _LOGGER.error("Local image file not found: %s", image_source)
+                    raise FileNotFoundError(f"Image file not found: {image_source}")
+                
+                # Read file asynchronously
+                loop = asyncio.get_event_loop()
+                image_data = await loop.run_in_executor(
+                    None,
+                    lambda: open(image_source, 'rb').read()
+                )
+                
+                if not image_data or len(image_data) == 0:
+                    _LOGGER.error("Local image file is empty: %s", image_source)
+                    raise ValueError("Local image file is empty.")
+                
+                return image_data
+            except FileNotFoundError:
+                raise
+            except Exception as err:
+                _LOGGER.error("Failed to read local image file: %s", err)
+                raise ValueError(f"Failed to read local image file: {err}") from err
+
     async def send_image_via_ddp(
         self,
-        image_url: str,
+        image_source: str,
         wled_host: str,
         width: int,
         height: int,
@@ -695,8 +769,9 @@ class PixelMagicToolAPI:
         """
         Send an image to WLED via DDP protocol.
         
-        This method downloads the image, resizes it to the specified dimensions,
-        converts it to RGB24 format, and sends it via DDP protocol.
+        This method loads an image from a URL or local file path, resizes it to 
+        the specified dimensions, converts it to RGB24 format, and sends it via 
+        DDP protocol.
         
         Before sending DDP packets, this method prepares the WLED device by:
         1. Disabling live override mode to ensure DDP updates persist
@@ -707,19 +782,20 @@ class PixelMagicToolAPI:
         the previous setting after DDP packets stop.
         
         Args:
-            image_url: URL of the image to send
+            image_source: URL (http://, https://) or local file path of the image
             wled_host: IP address or hostname of WLED device
             width: Target width in pixels
             height: Target height in pixels
             brightness: Brightness multiplier (0-255)
             timeout: Request timeout in seconds
-            session: Optional aiohttp session
+            session: Optional aiohttp session (only used for URL downloads)
             
         Returns:
             True if successful
             
         Raises:
             ValueError: If image processing fails
+            FileNotFoundError: If local file doesn't exist
             OSError: For network errors
         """
         close_session = False
@@ -760,16 +836,8 @@ class PixelMagicToolAPI:
                 )
                 # Continue anyway - DDP might still work
 
-            # Step 2: Download and process the image
-            _LOGGER.debug("Downloading image from: %s", image_url)
-            async with session.get(image_url) as response:
-                response.raise_for_status()
-                image_data = await response.read()
-
-            # Validate that we actually received image data
-            if not image_data or len(image_data) == 0:
-                _LOGGER.error("Downloaded image data is empty from URL: %s", image_url)
-                raise ValueError("Downloaded image data is empty. Please check the image URL.")
+            # Step 2: Load image from URL or local file
+            image_data = await self._load_image_data(image_source, session)
 
             # Open image with PIL
             try:

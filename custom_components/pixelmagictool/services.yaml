@@ -231,15 +231,22 @@ send_to_wled:
 
 send_to_wled_ddp:
   name: Send to WLED via DDP
-  description: Send an image directly to a WLED device using the DDP (Distributed Display Protocol). This is a more efficient protocol than JSON API, recommended for better performance and reliability.
+  description: Send an image directly to a WLED device using the DDP (Distributed Display Protocol). This is a more efficient protocol than JSON API, recommended for better performance and reliability. Supports both URLs and local file paths.
   response:
     optional: true
   fields:
     image_url:
       name: Image URL
-      description: URL of the image to send (can be a template that reads from sensor attributes)
-      required: true
+      description: URL of the image to send (can be a template that reads from sensor attributes). Either image_url or image_path must be provided, but not both.
+      required: false
       example: "{{ states.sensor.album_art.attributes.entity_picture }}"
+      selector:
+        text:
+    image_path:
+      name: Image Path
+      description: Local file path of the image to send (e.g., /config/www/image.png). Either image_url or image_path must be provided, but not both.
+      required: false
+      example: "/config/www/album_art.jpg"
       selector:
         text:
     wled_host:
