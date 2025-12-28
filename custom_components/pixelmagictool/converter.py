@@ -13,8 +13,11 @@ from PIL import Image
 try:
     # Prefer package-relative import when available (Home Assistant)
     from .ddp import DDPClient
-except ImportError:
-    # Fallback for direct module execution in standalone tests
+except ImportError as err:
+    # Only fall back when the ddp module itself is missing (e.g., direct test execution)
+    missing = getattr(err, "name", None)
+    if missing not in (None, "ddp", "pixelmagictool.ddp"):
+        raise
     from ddp import DDPClient
 
 _LOGGER = logging.getLogger(__name__)

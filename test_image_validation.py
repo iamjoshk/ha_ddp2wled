@@ -18,9 +18,8 @@ from PIL import Image
 sys.path.insert(0, 'custom_components/pixelmagictool')
 from converter import PixelMagicToolAPI
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_ddp_empty_image_data():
     """Test that send_image_via_ddp rejects empty image data."""
     print("=" * 70)
@@ -62,6 +61,7 @@ async def test_ddp_empty_image_data():
         return False
 
 
+@pytest.mark.asyncio
 async def test_ddp_invalid_image_data():
     """Test that send_image_via_ddp rejects invalid image data."""
     print("\n" + "=" * 70)
@@ -103,6 +103,7 @@ async def test_ddp_invalid_image_data():
         return False
 
 
+@pytest.mark.asyncio
 async def test_ddp_valid_image_data():
     """Test that send_image_via_ddp accepts valid image data."""
     print("\n" + "=" * 70)
