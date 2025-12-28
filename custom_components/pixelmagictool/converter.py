@@ -766,9 +766,18 @@ class PixelMagicToolAPI:
                 response.raise_for_status()
                 image_data = await response.read()
 
+            # Validate that we actually received image data
+            if not image_data or len(image_data) == 0:
+                _LOGGER.error("Downloaded image data is empty from URL: %s", image_url)
+                raise ValueError("Downloaded image data is empty. Please check the image URL.")
+
             # Open image with PIL
             try:
                 img = Image.open(io.BytesIO(image_data))
+                # Verify it's a valid image
+                img.load()  # Force loading to validate the image data
+                _LOGGER.debug("Successfully opened image: format=%s, size=%dx%d, mode=%s", 
+                             img.format, img.width, img.height, img.mode)
             except Exception as err:
                 _LOGGER.error("Failed to open image: %s", err)
                 raise ValueError(f"Failed to open image: {err}") from err
