@@ -41,13 +41,6 @@ send_to_wled_ddp:
           min: 1
           max: 256
           mode: box
-    brightness:
-      name: Brightness
-      description: LED brightness (0-255, can be a template)
-      default: 255
-      example: "{{ states('sensor.adaptive_lighting_brightness') }}"
-      selector:
-        text:
     segment_id:
       name: Segment ID
       description: WLED segment ID to target (default is 0)
@@ -68,30 +61,33 @@ send_to_wled_ddp:
           min: 1
           max: 60
           mode: box
-    keepalive_seconds:
-      name: Keepalive Seconds
+    brightness:
+      name: Brightness
+      description: Overall LED brightness of the display (0-255, can be a template)
+      default: 255
+      example: "{{ states('sensor.adaptive_lighting_brightness') }}"
+      selector:
+        text:
+    auto_bright:
+      name: Auto Image Adjustment
       description: >-
-        How long to keep re-sending the frame so WLED does not revert after the realtime timeout.
-        Set to 0 to disable.
-      default: 0
+        Enable automatic image adjustment. Helps fix washed out images.
+      default: true
+      advanced: true
+      selector:
+        boolean:
+    clip_hist_percent:
+      name: Auto Clipping Percentage
+      description: >-
+        Histogram clipping percentage for auto brightness/contrast (lower = less aggressive).
+        Only used when Auto Brightness/Contrast is enabled.
       advanced: true
       selector:
         number:
-          min: 0
-          max: 600
-          mode: box
-    keepalive_interval:
-      name: Keepalive Interval
-      description: Seconds between keepalive sends while keepalive is active
-      default: 1
-      advanced: true
-      selector:
-        number:
-          min: 0.1
-          max: 10
-          step: 0.1
+          min: 0.0
+          max: 50.0
+          step: 1.0
           mode: slider
-    # Image Processing Parameters (fixes washed out images)
     saturation:
       name: Saturation
       description: Color saturation adjustment (1.0 = no change, 0.0 = grayscale, 2.0 = highly saturated)
@@ -162,24 +158,26 @@ send_to_wled_ddp:
           max: 2.0
           step: 0.1
           mode: slider
-    auto_bright:
-      name: Auto Brightness/Contrast
+    keepalive_seconds:
+      name: Keepalive Seconds
       description: >-
-        Enable automatic brightness and contrast adjustment.
-        This is the "auto" feature from WLEDVideoSync that fixes washed out images.
-      default: true
-      advanced: true
-      selector:
-        boolean:
-    clip_hist_percent:
-      name: Auto Clipping Percentage
-      description: >-
-        Histogram clipping percentage for auto brightness/contrast (lower = less aggressive).
-        Only used when Auto Brightness/Contrast is enabled.
+        Might help prevent image from reverting to live override if issues occur.
+        Set to 0 to disable.
+      default: 0
       advanced: true
       selector:
         number:
-          min: 0.0
-          max: 50.0
-          step: 1.0
+          min: 0
+          max: 600
+          mode: box
+    keepalive_interval:
+      name: Keepalive Interval
+      description: Seconds between keepalive sends while keepalive is active
+      default: 1
+      advanced: true
+      selector:
+        number:
+          min: 0.1
+          max: 10
+          step: 0.1
           mode: slider
