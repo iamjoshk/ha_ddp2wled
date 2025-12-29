@@ -4,6 +4,8 @@ Test script for PixelMagicTool image processing features.
 
 This script demonstrates how the new WLEDVideoSync-compatible image processing
 features fix washed out images and provide advanced control over image quality.
+
+Uses only PIL/Pillow - no OpenCV or numpy required.
 """
 
 import asyncio

@@ -7,7 +7,6 @@ import logging
 import os
 
 import aiohttp
-import numpy as np
 from PIL import Image
 
 try:
@@ -246,14 +245,10 @@ class PixelMagicToolAPI:
                 _LOGGER.debug("Converting image from %s to RGB mode", img.mode)
                 img = img.convert("RGB")
             
-            # Convert PIL Image to numpy array for advanced processing
-            img_array = np.array(img)
-            _LOGGER.debug("Converting to numpy array for processing: shape=%s", img_array.shape)
-            
             # Apply WLEDVideoSync-style image processing pipeline
             # This includes gamma correction, auto brightness/contrast, and filters
             processed_img = ImageProcessor.process_image_for_led(
-                img_array,
+                img,
                 saturation=saturation,
                 brightness=1.0,  # Will apply legacy brightness separately
                 contrast=contrast,
@@ -266,14 +261,11 @@ class PixelMagicToolAPI:
                 clip_hist_percent=clip_hist_percent,
             )
             
-            # Convert back to PIL Image
-            processed_pil = Image.fromarray(processed_img.astype('uint8'), 'RGB')
-            
             # Apply legacy brightness scaling (for compatibility)
             if brightness < 255:
                 brightness_factor = brightness / 255.0
                 _LOGGER.debug("Applying legacy brightness factor: %.2f", brightness_factor)
-                pixels = processed_pil.load()
+                pixels = processed_img.load()
                 for y in range(height):
                     for x in range(width):
                         r, g, b = pixels[x, y]
@@ -284,7 +276,7 @@ class PixelMagicToolAPI:
                         )
             
             # Convert image to RGB byte array
-            rgb_data = processed_pil.tobytes()
+            rgb_data = processed_img.tobytes()
             
             _LOGGER.info(
                 "Converted image to RGB24: %d bytes for %dx%d image",
