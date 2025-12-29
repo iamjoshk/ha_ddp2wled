@@ -4,8 +4,8 @@
   "codeowners": ["@iamjoshk"],
   "config_flow": true,
   "documentation": "https://github.com/iamjoshk/ha_ddp2wled",
+  "iot_class": "local_push",
   "issue_tracker": "https://github.com/iamjoshk/ha_ddp2wled/issues",
   "requirements": ["aiohttp>=3.8.0", "Pillow>=9.0.0"],
-  "version": "0.1.0",
-  "iot_class": "local_push"
+  "version": "0.1.0"
 }
