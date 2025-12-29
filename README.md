@@ -1,4 +1,5 @@
 # HA DDP2WLED — DDP Sender for WLED
+<img width="256" height="256" alt="ha_ddp2wled_icon" src="https://github.com/user-attachments/assets/3ed3db34-920a-4487-8c24-278185451c60" />
 
 This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but I was not satisfied with the result of the image. I found https://github.com/zak-45/WLEDVideoSync and leveraged that instead.
 
