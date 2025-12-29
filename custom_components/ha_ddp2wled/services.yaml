@@ -48,9 +48,6 @@ send_to_wled_ddp:
       example: "{{ states('sensor.adaptive_lighting_brightness') }}"
       selector:
         text:
-          min: 0
-          max: 255
-          mode: slider
     segment_id:
       name: Segment ID
       description: WLED segment ID to target (default is 0)
