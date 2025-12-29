@@ -9,15 +9,31 @@ This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but
 - Sends it to a WLED device over DDP (UDP port 4048)
 
 ## Installation
-1. Copy `custom_components/ha_ddp2wled` into your Home Assistant `custom_components` folder.
-2. Restart Home Assistant and add the integration (name-only config flow).
+
+### Option 1: HACS (Recommended)
+1. Go to HACS
+2. Click the three dots menu (⋮) in the top right corner
+3. Select "Custom repositories"
+4. Add this repository URL: `https://github.com/iamjoshk/ha_ddp2wled`
+5. Select "Integration" as the category
+6. Click "Add"
+7. Search for "HA DDP2WLED" in HACS and install it
+8. Restart Home Assistant
+9. Go to Settings → Devices & Services → Add Integration
+10. Search for "HA DDP2WLED" and add it (name-only config flow)
+
+### Option 2: Manual Installation
+1. Copy `custom_components/ha_ddp2wled` into your Home Assistant `custom_components` folder
+2. Restart Home Assistant
+3. Go to Settings → Devices & Services → Add Integration
+4. Search for "HA DDP2WLED" and add it (name-only config flow)
 
 ## Service: `ha_ddp2wled.send_to_wled_ddp`
 Required fields:
 - `wled_host`: IP/hostname of the WLED device
 - `width`: target width in pixels
 - `height`: target height in pixels
-- Either `image_url` **or** `image_path`
+- Either `image_url` **or** `image_path` (templatable)
 
 Optional fields:
 - `brightness` (0-255, default 255), templateable
