@@ -1,6 +1,6 @@
 # HA DDP2WLED — DDP Sender for WLED
 
-
+This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but I was not satisfied with the result of the image. I found https://github.com/zak-45/WLEDVideoSync and leveraged that instead.
 
 ## What it does
 - Loads an image from a URL or local path
