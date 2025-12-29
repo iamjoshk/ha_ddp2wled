@@ -17,4 +17,4 @@ jobs:
         uses: "hacs/action@main"
         with:
           category: "integration"
-        with_ignore: "brands"
+          ignore: "brands"
