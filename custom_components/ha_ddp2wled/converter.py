@@ -74,7 +74,8 @@ class DDP2WLEDAPI:
         Args:
             wled_host: IP address or hostname of WLED device
             segment_id: WLED segment ID to stop (default: 0)
-            clear_display: Whether to turn off the LEDs after stopping
+            clear_display: If True, turns off live mode (may restore previous state).
+                          If False, just stops keepalive but preserves last frame.
             
         Returns:
             True if successful
@@ -86,10 +87,12 @@ class DDP2WLEDAPI:
         
         if clear_display:
             try:
-                # Turn off WLED live mode to restore previous state - based on WLEDVideoSync approach
                 import aiohttp
                 url = f"http://{wled_host}/json/state"
-                payload = {"live": False}  # Turn off live mode to restore previous WLED state
+                
+                # Turn off live mode - this may restore previous WLED state or keep current frame
+                # depending on WLED version and configuration
+                payload = {"live": False}
                 
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
@@ -98,17 +101,18 @@ class DDP2WLEDAPI:
                         timeout=aiohttp.ClientTimeout(total=5)
                     ) as response:
                         if response.status == 200:
-                            _LOGGER.debug("Successfully turned off live mode on WLED device %s", wled_host)
+                            _LOGGER.debug("Successfully stopped live mode on WLED device %s", wled_host)
                         else:
-                            _LOGGER.warning("Failed to turn off live mode on WLED device %s: HTTP %d", wled_host, response.status)
+                            _LOGGER.warning("Failed to stop live mode on WLED device %s: HTTP %d", wled_host, response.status)
                             return False
                             
             except Exception as err:
-                _LOGGER.warning("Error turning off live mode on %s: %s", wled_host, err)
+                _LOGGER.warning("Error stopping live mode on %s: %s", wled_host, err)
                 return False
         else:
-            # If not clearing display, just log that we're stopping the keepalive
-            _LOGGER.debug("Stopped keepalive task for %s without clearing display", wled_host)
+            # Just stop the keepalive task but don't send any API commands
+            # This preserves whatever is currently displayed
+            _LOGGER.debug("Stopped keepalive task for %s, preserving current display state", wled_host)
         
         _LOGGER.info("Successfully stopped DDP stream to %s", wled_host)
         return True
