@@ -14,11 +14,15 @@ from homeassistant.helpers.service import SupportsResponse
 
 from .const import (
     CONF_BRIGHTNESS,
+    CONF_CLEAR_DISPLAY,
     CONF_HEIGHT,
+    CONF_SEGMENT_ID,
     CONF_WLED_HOST,
     CONF_WIDTH,
     DEFAULT_BRIGHTNESS,
+    DEFAULT_CLEAR_DISPLAY,
     DEFAULT_HEIGHT,
+    DEFAULT_SEGMENT_ID,
     DEFAULT_WIDTH,
     DOMAIN,
     SERVICE_SEND_TO_WLED_DDP,
@@ -79,6 +83,10 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
 STOP_DDP_STREAM_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_WLED_HOST): cv.template,
+        vol.Optional(CONF_SEGMENT_ID, default=DEFAULT_SEGMENT_ID): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=31)
+        ),
+        vol.Optional(CONF_CLEAR_DISPLAY, default=DEFAULT_CLEAR_DISPLAY): cv.boolean,
     }
 )
 
@@ -264,8 +272,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the stop_ddp_stream service call."""
         try:
             wled_host = call.data[CONF_WLED_HOST]
-            segment_id = call.data["segment_id"]
-            clear_display = call.data["clear_display"]
+            segment_id = call.data[CONF_SEGMENT_ID]
+            clear_display = call.data[CONF_CLEAR_DISPLAY]
             
             _LOGGER.info(
                 "stop_ddp_stream service called: host=%s, segment=%d, clear_display=%s",

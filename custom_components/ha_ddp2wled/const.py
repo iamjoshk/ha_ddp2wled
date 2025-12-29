@@ -11,8 +11,12 @@ CONF_WLED_HOST = "wled_host"
 CONF_BRIGHTNESS = "brightness"
 CONF_WIDTH = "width"
 CONF_HEIGHT = "height"
+CONF_SEGMENT_ID = "segment_id"
+CONF_CLEAR_DISPLAY = "clear_display"
 
 # Default values
 DEFAULT_BRIGHTNESS = 255
 DEFAULT_WIDTH = 64
 DEFAULT_HEIGHT = 64
+DEFAULT_SEGMENT_ID = 0
+DEFAULT_CLEAR_DISPLAY = True
