@@ -20,10 +20,10 @@ Required fields:
 - Either `image_url` **or** `image_path`
 
 Optional fields:
-- `brightness` (0-255, default 255)
+- `brightness` (0-255, default 255), templateable
 - `segment_id` (default 0)
 - `timeout` seconds (default 10)
-- `keepalive_seconds` (default 60) — keep re-sending the frame so WLED does not revert after its realtime timeout
+- `keepalive_seconds` (default 0) — keep re-sending the frame so WLED does not revert after its realtime timeout
 - `keepalive_interval` (default 1) — seconds between keepalive sends
 
 ### Example
@@ -35,7 +35,13 @@ data:
   width: 32
   height: 32
   brightness: 200
+
 ```
+
+Examples of templates for setting the brightness:
+- `brightness: {{ 10 if now().hour <= 8 or now().hour >= 22 else 128 }}` would change the dim the display from 10pm to 8am.
+- `brightness: {{ states('input_number.display_brightness') }}` would let you change the brightness from an independent slider.
+
 
 ## Reference: WLEDVideoSync upstream architecture
 This integration is derived from the upstream [zak-45/WLEDVideoSync](https://github.com/zak-45/WLEDVideoSync) project. The relevant pieces there include:

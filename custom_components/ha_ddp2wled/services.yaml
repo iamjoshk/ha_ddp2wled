@@ -26,7 +26,7 @@ send_to_wled_ddp:
         text:
     width:
       name: Width
-      description: Target width in pixels (required for DDP)
+      description: Target width in pixels (required for DDP). 
       required: true
       selector:
         number:
@@ -35,7 +35,7 @@ send_to_wled_ddp:
           mode: box
     height:
       name: Height
-      description: Target height in pixels (required for DDP)
+      description: Target height in pixels (required for DDP).
       required: true
       selector:
         number:
@@ -56,6 +56,7 @@ send_to_wled_ddp:
       name: Segment ID
       description: WLED segment ID to target (default is 0)
       default: 0
+      advanced: true
       selector:
         number:
           min: 0
@@ -65,6 +66,7 @@ send_to_wled_ddp:
       name: Timeout
       description: Request timeout in seconds
       default: 10
+      advanced: true
       selector:
         number:
           min: 1
@@ -75,7 +77,8 @@ send_to_wled_ddp:
       description: >-
         How long to keep re-sending the frame so WLED does not revert after the realtime timeout.
         Set to 0 to disable.
-      default: 60
+      default: 0
+      advanced: true
       selector:
         number:
           min: 0
@@ -85,6 +88,7 @@ send_to_wled_ddp:
       name: Keepalive Interval
       description: Seconds between keepalive sends while keepalive is active
       default: 1
+      advanced: true
       selector:
         number:
           min: 0.1
@@ -95,7 +99,7 @@ send_to_wled_ddp:
     saturation:
       name: Saturation
       description: Color saturation adjustment (1.0 = no change, 0.0 = grayscale, 2.0 = highly saturated)
-      default: 1.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -105,7 +109,7 @@ send_to_wled_ddp:
     contrast:
       name: Contrast
       description: Image contrast adjustment (1.0 = no change, 0.0 = gray, 2.0 = high contrast)
-      default: 1.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -115,7 +119,7 @@ send_to_wled_ddp:
     sharpen:
       name: Sharpen
       description: Image sharpening intensity (0.0 = no sharpening, 1.0 = maximum sharpening)
-      default: 0.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -125,7 +129,7 @@ send_to_wled_ddp:
     balance_r:
       name: Red Balance
       description: Red channel color balance (1.0 = no change, 0.0 = no red, 2.0 = enhanced red)
-      default: 1.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -135,7 +139,7 @@ send_to_wled_ddp:
     balance_g:
       name: Green Balance
       description: Green channel color balance (1.0 = no change, 0.0 = no green, 2.0 = enhanced green)
-      default: 1.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -145,7 +149,7 @@ send_to_wled_ddp:
     balance_b:
       name: Blue Balance
       description: Blue channel color balance (1.0 = no change, 0.0 = no blue, 2.0 = enhanced blue)
-      default: 1.0
+      advanced: true
       selector:
         number:
           min: 0.0
@@ -155,7 +159,7 @@ send_to_wled_ddp:
     gamma:
       name: Gamma Correction
       description: Gamma correction for LED display (0.5 = default for LEDs, 1.0 = no change, lower = brighter)
-      default: 0.5
+      advanced: true
       selector:
         number:
           min: 0.1
@@ -168,6 +172,7 @@ send_to_wled_ddp:
         Enable automatic brightness and contrast adjustment.
         This is the "auto" feature from WLEDVideoSync that fixes washed out images.
       default: true
+      advanced: true
       selector:
         boolean:
     clip_hist_percent:
@@ -175,7 +180,7 @@ send_to_wled_ddp:
       description: >-
         Histogram clipping percentage for auto brightness/contrast (lower = less aggressive).
         Only used when Auto Brightness/Contrast is enabled.
-      default: 25.0
+      advanced: true
       selector:
         number:
           min: 0.0

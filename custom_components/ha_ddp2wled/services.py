@@ -37,36 +37,36 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         ),
         vol.Optional("segment_id", default=0): cv.positive_int,
         vol.Optional("timeout", default=10): cv.positive_int,
-        vol.Optional("keepalive_seconds", default=60): vol.All(
+        vol.Optional("keepalive_seconds", default=0): vol.All(
             vol.Coerce(float), vol.Range(min=0)
         ),
         vol.Optional("keepalive_interval", default=1): vol.All(
             vol.Coerce(float), vol.Range(min=0.1)
         ),
         # Image processing parameters (WLEDVideoSync compatible)
-        vol.Optional("saturation", default=1.0): vol.All(
+        vol.Optional("saturation"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=2.0)
         ),
-        vol.Optional("contrast", default=1.0): vol.All(
+        vol.Optional("contrast"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=2.0)
         ),
-        vol.Optional("sharpen", default=0.0): vol.All(
+        vol.Optional("sharpen"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=1.0)
         ),
-        vol.Optional("balance_r", default=1.0): vol.All(
+        vol.Optional("balance_r"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=2.0)
         ),
-        vol.Optional("balance_g", default=1.0): vol.All(
+        vol.Optional("balance_g"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=2.0)
         ),
-        vol.Optional("balance_b", default=1.0): vol.All(
+        vol.Optional("balance_b"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=2.0)
         ),
-        vol.Optional("gamma", default=0.5): vol.All(
+        vol.Optional("gamma"): vol.All(
             vol.Coerce(float), vol.Range(min=0.1, max=2.0)
         ),
         vol.Optional("auto_bright", default=True): cv.boolean,
-        vol.Optional("clip_hist_percent", default=25.0): vol.All(
+        vol.Optional("clip_hist_percent"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=50.0)
         ),
     }
@@ -125,16 +125,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             keepalive_seconds = call.data["keepalive_seconds"]
             keepalive_interval = call.data["keepalive_interval"]
 
-            # Get image processing parameters
-            saturation = call.data["saturation"]
-            contrast = call.data["contrast"]
-            sharpen = call.data["sharpen"]
-            balance_r = call.data["balance_r"]
-            balance_g = call.data["balance_g"]
-            balance_b = call.data["balance_b"]
-            gamma = call.data["gamma"]
+            # Get image processing parameters (use defaults only if not specified)
+            saturation = call.data.get("saturation", 1.0)
+            contrast = call.data.get("contrast", 1.0)
+            sharpen = call.data.get("sharpen", 0.0)
+            balance_r = call.data.get("balance_r", 1.0)
+            balance_g = call.data.get("balance_g", 1.0)
+            balance_b = call.data.get("balance_b", 1.0)
+            gamma = call.data.get("gamma", 0.5)
             auto_bright = call.data["auto_bright"]
-            clip_hist_percent = call.data["clip_hist_percent"]
+            clip_hist_percent = call.data.get("clip_hist_percent", 25.0)
 
             _LOGGER.info(
                 "send_to_wled_ddp service called: host=%s, source_type=%s, "
