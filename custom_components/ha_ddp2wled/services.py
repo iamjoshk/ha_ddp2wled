@@ -18,8 +18,11 @@ from .const import (
     CONF_WLED_HOST,
     CONF_WIDTH,
     DEFAULT_BRIGHTNESS,
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
     DOMAIN,
     SERVICE_SEND_TO_WLED_DDP,
+    SERVICE_STOP_DDP_STREAM,
 )
 from .converter import DDP2WLEDAPI
 
@@ -69,6 +72,13 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         vol.Optional("clip_hist_percent"): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=50.0)
         ),
+    }
+)
+
+# Stop stream service schema
+STOP_DDP_STREAM_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_WLED_HOST): cv.template,
     }
 )
 
@@ -250,12 +260,72 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Error sending to WLED via DDP: %s", err)
             raise
 
+    async def handle_stop_ddp_stream(call: ServiceCall) -> dict[str, Any]:
+        """Handle the stop_ddp_stream service call."""
+        try:
+            wled_host = call.data[CONF_WLED_HOST]
+            segment_id = call.data["segment_id"]
+            clear_display = call.data["clear_display"]
+            
+            _LOGGER.info(
+                "stop_ddp_stream service called: host=%s, segment=%d, clear_display=%s",
+                wled_host,
+                segment_id,
+                clear_display,
+            )
+            
+            # Stop the stream
+            success = await api.stop_stream(
+                wled_host=wled_host,
+                segment_id=segment_id,
+                clear_display=clear_display,
+            )
+            
+            if success:
+                _LOGGER.info("Successfully stopped stream to %s", wled_host)
+                
+                # Fire success event
+                hass.bus.async_fire(
+                    f"{DOMAIN}_stopped_ddp_stream",
+                    {
+                        "wled_host": wled_host,
+                        "segment_id": segment_id,
+                        "clear_display": clear_display,
+                    },
+                )
+                
+                return {
+                    "success": True,
+                    "wled_host": wled_host,
+                    "segment_id": segment_id,
+                    "clear_display": clear_display,
+                }
+            else:
+                _LOGGER.error("Failed to stop stream to %s", wled_host)
+                return {
+                    "success": False,
+                    "wled_host": wled_host,
+                    "error": "Failed to stop stream",
+                }
+                
+        except Exception as err:
+            _LOGGER.error("Error stopping stream: %s", err)
+            raise
+
     # Register services
     hass.services.async_register(
         DOMAIN,
         SERVICE_SEND_TO_WLED_DDP,
         handle_send_to_wled_ddp,
         schema=SEND_TO_WLED_DDP_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_STOP_DDP_STREAM,
+        handle_stop_ddp_stream,
+        schema=STOP_DDP_STREAM_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 

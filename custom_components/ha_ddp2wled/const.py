@@ -4,6 +4,7 @@ DOMAIN = "ha_ddp2wled"
 
 # Service names
 SERVICE_SEND_TO_WLED_DDP = "send_to_wled_ddp"
+SERVICE_STOP_DDP_STREAM = "stop_ddp_stream"
 
 # Configuration and options
 CONF_WLED_HOST = "wled_host"

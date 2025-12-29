@@ -37,22 +37,80 @@ class DDP2WLEDAPI:
             api_url: Ignored parameter kept for backwards compatibility.
                     This class only uses DDP protocol and doesn't need an API URL.
         """
-        self._keepalive_task: asyncio.Task | None = None
+        self._keepalive_tasks: dict[str, asyncio.Task] = {}  # Track tasks by host
 
     async def async_close(self) -> None:
-        """Cancel any running keepalive task."""
-        await self._cancel_keepalive_task()
+        """Cancel all running keepalive tasks."""
+        await self._cancel_all_keepalive_tasks()
 
-    async def _cancel_keepalive_task(self) -> None:
-        """Cancel and await any running keepalive task."""
-        if self._keepalive_task and not self._keepalive_task.done():
-            self._keepalive_task.cancel()
-            _LOGGER.debug("Cancelled previous DDP keepalive task")
+    async def _cancel_all_keepalive_tasks(self) -> None:
+        """Cancel and await all running keepalive tasks."""
+        for host, task in list(self._keepalive_tasks.items()):
+            if task and not task.done():
+                task.cancel()
+                _LOGGER.debug("Cancelled DDP keepalive task for host %s", host)
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            self._keepalive_tasks.pop(host, None)
+
+    async def _cancel_keepalive_task(self, host: str) -> None:
+        """Cancel and await keepalive task for a specific host."""
+        task = self._keepalive_tasks.get(host)
+        if task and not task.done():
+            task.cancel()
+            _LOGGER.debug("Cancelled DDP keepalive task for host %s", host)
             try:
-                await self._keepalive_task
+                await task
             except asyncio.CancelledError:
                 pass
-        self._keepalive_task = None
+        self._keepalive_tasks.pop(host, None)
+
+    async def stop_stream(self, wled_host: str, segment_id: int = 0, clear_display: bool = True) -> bool:
+        """
+        Stop DDP stream to a specific WLED device.
+        
+        Args:
+            wled_host: IP address or hostname of WLED device
+            segment_id: WLED segment ID to stop (default: 0)
+            clear_display: Whether to turn off the LEDs after stopping
+            
+        Returns:
+            True if successful
+        """
+        _LOGGER.info("Stopping DDP stream to %s (segment %d)", wled_host, segment_id)
+        
+        # Cancel any keepalive task for this host
+        await self._cancel_keepalive_task(wled_host)
+        
+        if clear_display:
+            try:
+                # Send a command to turn off the LEDs
+                import aiohttp
+                url = f"http://{wled_host}/json/state"
+                payload = {
+                    "on": False,
+                    "seg": [{"id": segment_id}]
+                }
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        url,
+                        json=payload,
+                        timeout=aiohttp.ClientTimeout(total=5)
+                    ) as response:
+                        if response.status == 200:
+                            _LOGGER.debug("Successfully cleared display on %s", wled_host)
+                        else:
+                            _LOGGER.warning("Failed to clear display on %s: HTTP %d", wled_host, response.status)
+                            
+            except Exception as err:
+                _LOGGER.warning("Error clearing display on %s: %s", wled_host, err)
+                return False
+        
+        _LOGGER.info("Successfully stopped DDP stream to %s", wled_host)
+        return True
 
     def _validate_image_data(self, image_data: bytes, source: str) -> None:
         """
@@ -303,7 +361,7 @@ class DDP2WLEDAPI:
                 # CASTMedia behavior of keeping the stream alive.
                 if keepalive_seconds > 0 and keepalive_interval > 0 and keepalive_interval >= MIN_KEEPALIVE_INTERVAL:
                     loop = asyncio.get_running_loop()
-                    await self._cancel_keepalive_task()
+                    await self._cancel_keepalive_task(wled_host)
 
                     async def _keepalive() -> None:
                         end_time = loop.time() + keepalive_seconds
@@ -362,10 +420,10 @@ class DDP2WLEDAPI:
                             _LOGGER.debug("DDP keepalive task finished with error: %s", exc)
                         else:
                             _LOGGER.debug("DDP keepalive task finished cleanly")
-                        self._keepalive_task = None
+                        self._keepalive_tasks.pop(wled_host, None)
 
                     task.add_done_callback(_on_keepalive_done)
-                    self._keepalive_task = task
+                    self._keepalive_tasks[wled_host] = task
                     _LOGGER.info(
                         "Keeping DDP frame alive for %.1f seconds (interval %.2f)",
                         keepalive_seconds,

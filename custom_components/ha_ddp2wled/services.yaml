@@ -181,3 +181,30 @@ send_to_wled_ddp:
           max: 10
           step: 0.1
           mode: slider
+
+stop_ddp_stream:
+  name: Stop DDP Stream
+  description: Stop an active DDP stream to a specific WLED device. This will cancel any ongoing keepalive tasks and clear the display.
+  fields:
+    wled_host:
+      name: WLED Host
+      description: IP address or hostname of WLED device to stop streaming to
+      required: true
+      example: "192.168.1.100"
+      selector:
+        text:
+    segment_id:
+      name: Segment ID
+      description: WLED segment ID to stop (default is 0)
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 31
+          mode: box
+    clear_display:
+      name: Clear Display
+      description: Turn off the LEDs after stopping the stream
+      default: true
+      selector:
+        boolean:

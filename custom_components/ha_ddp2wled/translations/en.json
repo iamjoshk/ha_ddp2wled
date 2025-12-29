@@ -20,6 +20,24 @@
     "send_to_wled_ddp": {
       "name": "Send to WLED via DDP",
       "description": "Send an image directly to a WLED device using DDP protocol"
+    },
+    "stop_ddp_stream": {
+      "name": "Stop DDP Stream",
+      "description": "Stop an active DDP stream to a specific WLED device. This will cancel any ongoing keepalive tasks and clear the display.",
+      "fields": {
+        "wled_host": {
+          "name": "WLED Host",
+          "description": "The hostname or IP address of the WLED device to stop the stream for."
+        },
+        "segment_id": {
+          "name": "Segment ID",
+          "description": "The segment ID to stop the stream for."
+        },
+        "clear_display": {
+          "name": "Clear Display",
+          "description": "Whether to clear the display after stopping the stream."
+        }
+      }
     }
   }
 }
