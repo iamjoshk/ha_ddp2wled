@@ -74,8 +74,8 @@ class DDP2WLEDAPI:
         Args:
             wled_host: IP address or hostname of WLED device
             segment_id: WLED segment ID to stop (default: 0)
-            clear_display: If True, turns off live mode (may restore previous state).
-                          If False, just stops keepalive but preserves last frame.
+            clear_display: If True, turns off live mode (restores previous state).
+                          If False, stops live mode but attempts to preserve current frame.
             
         Returns:
             True if successful
@@ -85,34 +85,36 @@ class DDP2WLEDAPI:
         # Cancel any keepalive task for this host
         await self._cancel_keepalive_task(wled_host)
         
-        if clear_display:
-            try:
-                import aiohttp
-                url = f"http://{wled_host}/json/state"
-                
-                # Turn off live mode - this may restore previous WLED state or keep current frame
-                # depending on WLED version and configuration
+        # Always need to stop the stream properly by turning off live mode
+        try:
+            import aiohttp
+            url = f"http://{wled_host}/json/state"
+            
+            if clear_display:
+                # Turn off live mode - this typically restores previous WLED state
                 payload = {"live": False}
-                
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        url,
-                        json=payload,
-                        timeout=aiohttp.ClientTimeout(total=5)
-                    ) as response:
-                        if response.status == 200:
-                            _LOGGER.debug("Successfully stopped live mode on WLED device %s", wled_host)
-                        else:
-                            _LOGGER.warning("Failed to stop live mode on WLED device %s: HTTP %d", wled_host, response.status)
-                            return False
-                            
-            except Exception as err:
-                _LOGGER.warning("Error stopping live mode on %s: %s", wled_host, err)
-                return False
-        else:
-            # Just stop the keepalive task but don't send any API commands
-            # This preserves whatever is currently displayed
-            _LOGGER.debug("Stopped keepalive task for %s, preserving current display state", wled_host)
+                log_msg = "Stopped live mode on WLED device %s (restoring previous state)"
+            else:
+                # Turn off live mode but try to keep current colors by setting a static effect
+                # Note: This may not work as expected on all WLED versions
+                payload = {"live": False, "seg": {"id": segment_id, "fx": 0}}  # fx 0 = solid color
+                log_msg = "Stopped live mode on WLED device %s (attempting to preserve frame)"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=5)
+                ) as response:
+                    if response.status == 200:
+                        _LOGGER.debug(log_msg, wled_host)
+                    else:
+                        _LOGGER.warning("Failed to stop live mode on WLED device %s: HTTP %d", wled_host, response.status)
+                        return False
+                        
+        except Exception as err:
+            _LOGGER.warning("Error stopping live mode on %s: %s", wled_host, err)
+            return False
         
         _LOGGER.info("Successfully stopped DDP stream to %s", wled_host)
         return True

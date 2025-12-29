@@ -184,7 +184,7 @@ send_to_wled_ddp:
 
 stop_ddp_stream:
   name: Stop DDP Stream
-  description: Stop an active DDP stream to a specific WLED device. This will cancel any ongoing keepalive tasks. If clear_display is true, turns off live mode (may restore previous WLED state). If false, preserves the last frame displayed.
+  description: Stop an active DDP stream to a specific WLED device. This will cancel any ongoing keepalive tasks and turn off live mode. The clear_display option attempts different approaches but may not preserve frames on all WLED versions.
   fields:
     wled_host:
       name: WLED Host
@@ -204,7 +204,7 @@ stop_ddp_stream:
           mode: box
     clear_display:
       name: Clear Display
-      description: If true, turns off live mode (may restore previous WLED state). If false, preserves the last frame displayed.
+      description: If true, simply turns off live mode (typically restores previous state). If false, attempts to preserve current frame by setting solid color effect (may not work on all WLED versions).
       default: true
       selector:
         boolean:
