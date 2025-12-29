@@ -43,6 +43,32 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         vol.Optional("keepalive_interval", default=1): vol.All(
             vol.Coerce(float), vol.Range(min=0.1)
         ),
+        # Image processing parameters (WLEDVideoSync compatible)
+        vol.Optional("saturation", default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=2.0)
+        ),
+        vol.Optional("contrast", default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=2.0)
+        ),
+        vol.Optional("sharpen", default=0.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=1.0)
+        ),
+        vol.Optional("balance_r", default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=2.0)
+        ),
+        vol.Optional("balance_g", default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=2.0)
+        ),
+        vol.Optional("balance_b", default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=2.0)
+        ),
+        vol.Optional("gamma", default=0.5): vol.All(
+            vol.Coerce(float), vol.Range(min=0.1, max=2.0)
+        ),
+        vol.Optional("auto_bright", default=True): cv.boolean,
+        vol.Optional("clip_hist_percent", default=25.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=50.0)
+        ),
     }
 )
 
@@ -85,9 +111,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             keepalive_seconds = call.data["keepalive_seconds"]
             keepalive_interval = call.data["keepalive_interval"]
 
+            # Get image processing parameters
+            saturation = call.data["saturation"]
+            contrast = call.data["contrast"]
+            sharpen = call.data["sharpen"]
+            balance_r = call.data["balance_r"]
+            balance_g = call.data["balance_g"]
+            balance_b = call.data["balance_b"]
+            gamma = call.data["gamma"]
+            auto_bright = call.data["auto_bright"]
+            clip_hist_percent = call.data["clip_hist_percent"]
+
             _LOGGER.info(
                 "send_to_wled_ddp service called: host=%s, source_type=%s, "
-                "dimensions=%dx%d, brightness=%d, segment=%d, keepalive=%.1fs/%.2fs",
+                "dimensions=%dx%d, brightness=%d, segment=%d, keepalive=%.1fs/%.2fs, "
+                "auto_bright=%s, gamma=%.2f",
                 wled_host,
                 source_type,
                 width,
@@ -96,6 +134,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 segment_id,
                 keepalive_seconds,
                 keepalive_interval,
+                auto_bright,
+                gamma,
             )
             _LOGGER.debug("Image source: %s", image_source)
 
@@ -111,6 +151,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     timeout=timeout_seconds,
                     keepalive_seconds=keepalive_seconds,
                     keepalive_interval=keepalive_interval,
+                    # Image processing parameters
+                    saturation=saturation,
+                    contrast=contrast,
+                    sharpen=sharpen,
+                    balance_r=balance_r,
+                    balance_g=balance_g,
+                    balance_b=balance_b,
+                    gamma=gamma,
+                    auto_bright=auto_bright,
+                    clip_hist_percent=clip_hist_percent,
                 )
             except ValueError as err:
                 _LOGGER.error("Failed to process image: %s", err)

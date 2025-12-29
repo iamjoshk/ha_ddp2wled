@@ -91,3 +91,94 @@ send_to_wled_ddp:
           max: 10
           step: 0.1
           mode: slider
+    # Image Processing Parameters (fixes washed out images)
+    saturation:
+      name: Saturation
+      description: Color saturation adjustment (1.0 = no change, 0.0 = grayscale, 2.0 = highly saturated)
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 2.0
+          step: 0.1
+          mode: slider
+    contrast:
+      name: Contrast
+      description: Image contrast adjustment (1.0 = no change, 0.0 = gray, 2.0 = high contrast)
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 2.0
+          step: 0.1
+          mode: slider
+    sharpen:
+      name: Sharpen
+      description: Image sharpening intensity (0.0 = no sharpening, 1.0 = maximum sharpening)
+      default: 0.0
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.1
+          mode: slider
+    balance_r:
+      name: Red Balance
+      description: Red channel color balance (1.0 = no change, 0.0 = no red, 2.0 = enhanced red)
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 2.0
+          step: 0.1
+          mode: slider
+    balance_g:
+      name: Green Balance
+      description: Green channel color balance (1.0 = no change, 0.0 = no green, 2.0 = enhanced green)
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 2.0
+          step: 0.1
+          mode: slider
+    balance_b:
+      name: Blue Balance
+      description: Blue channel color balance (1.0 = no change, 0.0 = no blue, 2.0 = enhanced blue)
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 2.0
+          step: 0.1
+          mode: slider
+    gamma:
+      name: Gamma Correction
+      description: Gamma correction for LED display (0.5 = default for LEDs, 1.0 = no change, lower = brighter)
+      default: 0.5
+      selector:
+        number:
+          min: 0.1
+          max: 2.0
+          step: 0.1
+          mode: slider
+    auto_bright:
+      name: Auto Brightness/Contrast
+      description: >-
+        Enable automatic brightness and contrast adjustment.
+        This is the "auto" feature from WLEDVideoSync that fixes washed out images.
+      default: true
+      selector:
+        boolean:
+    clip_hist_percent:
+      name: Auto Clipping Percentage
+      description: >-
+        Histogram clipping percentage for auto brightness/contrast (lower = less aggressive).
+        Only used when Auto Brightness/Contrast is enabled.
+      default: 25.0
+      selector:
+        number:
+          min: 0.0
+          max: 50.0
+          step: 1.0
+          mode: slider

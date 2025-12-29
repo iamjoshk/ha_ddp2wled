@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/iamjoshk/PixelMagicTool",
   "issue_tracker": "https://github.com/iamjoshk/PixelMagicTool/issues",
-  "requirements": ["aiohttp>=3.8.0", "Pillow>=9.0.0"],
+  "requirements": ["aiohttp>=3.8.0", "Pillow>=9.0.0", "opencv-python>=4.5.0", "numpy>=1.19.0"],
   "version": "2.0.0",
   "iot_class": "local_push"
 }

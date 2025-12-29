@@ -7,17 +7,20 @@ import logging
 import os
 
 import aiohttp
+import numpy as np
 from PIL import Image
 
 try:
     # Prefer package-relative import when available (Home Assistant)
     from .ddp import DDPClient
+    from .image_processing import ImageProcessor
 except ImportError as err:
     # Only fall back when the ddp module itself is missing (e.g., direct test execution)
     missing = getattr(err, "name", None)
     if missing not in (None, "ddp", "pixelmagictool.ddp"):
         raise
     from ddp import DDPClient
+    from image_processing import ImageProcessor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -157,13 +160,24 @@ class PixelMagicToolAPI:
         session: aiohttp.ClientSession | None = None,
         keepalive_seconds: float = 60.0,
         keepalive_interval: float = 1.0,
+        # Image processing parameters
+        saturation: float = 1.0,
+        contrast: float = 1.0,
+        sharpen: float = 0.0,
+        balance_r: float = 1.0,
+        balance_g: float = 1.0,
+        balance_b: float = 1.0,
+        gamma: float = 0.5,
+        auto_bright: bool = True,
+        clip_hist_percent: float = 25.0,
     ) -> bool:
         """
-        Send an image to WLED via DDP protocol.
+        Send an image to WLED via DDP protocol with advanced image processing.
         
-        This method loads an image from a URL or local file path, resizes it to 
-        the specified dimensions, converts it to RGB24 format, and sends it via 
-        DDP protocol.
+        This method loads an image from a URL or local file path, applies sophisticated
+        image processing (based on WLEDVideoSync algorithms) to optimize for LED 
+        displays, resizes it to the specified dimensions, converts it to RGB24 format, 
+        and sends it via DDP protocol.
         
         By default this matches the WLEDVideoSync behavior: DDP packets are sent
         directly without any HTTP preparation. A `prepare_device` option is available
@@ -175,13 +189,24 @@ class PixelMagicToolAPI:
             wled_host: IP address or hostname of WLED device
             width: Target width in pixels
             height: Target height in pixels
-            brightness: Brightness multiplier (0-255)
+            brightness: Brightness multiplier (0-255) - applied after image processing
             segment_id: WLED segment ID (default: 0)
             timeout: Request timeout in seconds
             session: Optional aiohttp session (only used for URL downloads)
             keepalive_seconds: How long to keep re-sending the frame to avoid
                 WLED reverting after its realtime timeout (0 disables keepalive)
             keepalive_interval: Seconds between keepalive sends
+            
+            # Image Processing Parameters (WLEDVideoSync compatible):
+            saturation: Saturation adjustment (0.0-2.0, 1.0=no change)
+            contrast: Contrast adjustment (0.0-2.0, 1.0=no change)  
+            sharpen: Sharpening intensity (0.0-1.0, 0.0=no sharpening)
+            balance_r: Red channel balance (0.0-2.0, 1.0=no change)
+            balance_g: Green channel balance (0.0-2.0, 1.0=no change)
+            balance_b: Blue channel balance (0.0-2.0, 1.0=no change)
+            gamma: Gamma correction (0.1-2.0, 0.5=default for LEDs, 1.0=no change)
+            auto_bright: Enable automatic brightness/contrast (fixes washed out images)
+            clip_hist_percent: Clipping percentage for auto adjustment (0-50, typically 25)
             
         Returns:
             True if successful
@@ -221,11 +246,34 @@ class PixelMagicToolAPI:
                 _LOGGER.debug("Converting image from %s to RGB mode", img.mode)
                 img = img.convert("RGB")
             
-            # Apply brightness
+            # Convert PIL Image to numpy array for advanced processing
+            img_array = np.array(img)
+            _LOGGER.debug("Converting to numpy array for processing: shape=%s", img_array.shape)
+            
+            # Apply WLEDVideoSync-style image processing pipeline
+            # This includes gamma correction, auto brightness/contrast, and filters
+            processed_img = ImageProcessor.process_image_for_led(
+                img_array,
+                saturation=saturation,
+                brightness=1.0,  # Will apply legacy brightness separately
+                contrast=contrast,
+                sharpen=sharpen,
+                balance_r=balance_r,
+                balance_g=balance_g,
+                balance_b=balance_b,
+                gamma=gamma,
+                auto_bright=auto_bright,
+                clip_hist_percent=clip_hist_percent,
+            )
+            
+            # Convert back to PIL Image
+            processed_pil = Image.fromarray(processed_img.astype('uint8'), 'RGB')
+            
+            # Apply legacy brightness scaling (for compatibility)
             if brightness < 255:
                 brightness_factor = brightness / 255.0
-                _LOGGER.debug("Applying brightness factor: %.2f", brightness_factor)
-                pixels = img.load()
+                _LOGGER.debug("Applying legacy brightness factor: %.2f", brightness_factor)
+                pixels = processed_pil.load()
                 for y in range(height):
                     for x in range(width):
                         r, g, b = pixels[x, y]
@@ -236,7 +284,7 @@ class PixelMagicToolAPI:
                         )
             
             # Convert image to RGB byte array
-            rgb_data = img.tobytes()
+            rgb_data = processed_pil.tobytes()
             
             _LOGGER.info(
                 "Converted image to RGB24: %d bytes for %dx%d image",
