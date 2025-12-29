@@ -1,7 +1,6 @@
 send_to_wled_ddp:
   name: Send to WLED via DDP
   description: Send an image directly to a WLED device using the DDP (Distributed Display Protocol). This is the recommended method for best performance and reliability. Supports both URLs and local file paths. The image will persist on the device after transmission completes.
-  target:
   fields:
     image_url:
       name: Image URL
