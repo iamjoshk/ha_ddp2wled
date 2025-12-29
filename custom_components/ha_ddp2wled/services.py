@@ -32,8 +32,8 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
         vol.Required(CONF_WLED_HOST): cv.string,
         vol.Required(CONF_WIDTH): cv.positive_int,
         vol.Required(CONF_HEIGHT): cv.positive_int,
-        vol.Optional(CONF_BRIGHTNESS, default=DEFAULT_BRIGHTNESS): vol.All(
-            cv.positive_int, vol.Range(min=0, max=255)
+        vol.Optional(CONF_BRIGHTNESS, default=DEFAULT_BRIGHTNESS): vol.Any(
+            cv.template, vol.All(cv.positive_int, vol.Range(min=0, max=255))
         ),
         vol.Optional("segment_id", default=0): cv.positive_int,
         vol.Optional("timeout", default=10): cv.positive_int,
@@ -106,7 +106,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             timeout_seconds = call.data["timeout"]
             width = call.data[CONF_WIDTH]
             height = call.data[CONF_HEIGHT]
-            brightness = call.data[CONF_BRIGHTNESS]
+            
+            # Handle brightness template rendering
+            brightness_template = call.data[CONF_BRIGHTNESS]
+            if isinstance(brightness_template, template.Template):
+                brightness_str = brightness_template.async_render(parse_result=False)
+                try:
+                    brightness = int(float(brightness_str))
+                    # Clamp brightness to valid range
+                    brightness = max(0, min(255, brightness))
+                except (ValueError, TypeError):
+                    _LOGGER.error("Invalid brightness value from template: %s", brightness_str)
+                    brightness = DEFAULT_BRIGHTNESS
+            else:
+                brightness = brightness_template
+            
             segment_id = call.data["segment_id"]
             keepalive_seconds = call.data["keepalive_seconds"]
             keepalive_interval = call.data["keepalive_interval"]

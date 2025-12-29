@@ -44,10 +44,11 @@ send_to_wled_ddp:
           mode: box
     brightness:
       name: Brightness
-      description: LED brightness (0-255)
+      description: LED brightness (0-255, can be a template)
       default: 255
+      example: "{{ states('sensor.adaptive_lighting_brightness') }}"
       selector:
-        number:
+        text:
           min: 0
           max: 255
           mode: slider
