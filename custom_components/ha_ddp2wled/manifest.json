@@ -1,0 +1,11 @@
+{
+  "domain": "ha_ddp2wled",
+  "name": "HA DDP2WLED",
+  "codeowners": ["@iamjoshk"],
+  "config_flow": true,
+  "documentation": "https://github.com/iamjoshk/ha_ddp2wled",
+  "issue_tracker": "https://github.com/iamjoshk/ha_ddp2wled/issues",
+  "requirements": ["aiohttp>=3.8.0", "Pillow>=9.0.0"],
+  "version": "2.0.0",
+  "iot_class": "local_push"
+}
