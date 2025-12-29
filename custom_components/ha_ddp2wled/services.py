@@ -82,7 +82,7 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
 # Stop stream service schema
 STOP_DDP_STREAM_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_WLED_HOST): cv.template,
+        vol.Required(CONF_WLED_HOST): cv.string,
         vol.Optional(CONF_SEGMENT_ID, default=DEFAULT_SEGMENT_ID): vol.All(
             vol.Coerce(int), vol.Range(min=0, max=31)
         ),
