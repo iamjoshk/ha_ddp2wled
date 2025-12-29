@@ -86,13 +86,10 @@ class DDP2WLEDAPI:
         
         if clear_display:
             try:
-                # Send a command to turn off the LEDs
+                # Turn off WLED live mode to restore previous state - based on WLEDVideoSync approach
                 import aiohttp
                 url = f"http://{wled_host}/json/state"
-                payload = {
-                    "on": False,
-                    "seg": [{"id": segment_id}]
-                }
+                payload = {"live": False}  # Turn off live mode to restore previous WLED state
                 
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
@@ -101,13 +98,17 @@ class DDP2WLEDAPI:
                         timeout=aiohttp.ClientTimeout(total=5)
                     ) as response:
                         if response.status == 200:
-                            _LOGGER.debug("Successfully cleared display on %s", wled_host)
+                            _LOGGER.debug("Successfully turned off live mode on WLED device %s", wled_host)
                         else:
-                            _LOGGER.warning("Failed to clear display on %s: HTTP %d", wled_host, response.status)
+                            _LOGGER.warning("Failed to turn off live mode on WLED device %s: HTTP %d", wled_host, response.status)
+                            return False
                             
             except Exception as err:
-                _LOGGER.warning("Error clearing display on %s: %s", wled_host, err)
+                _LOGGER.warning("Error turning off live mode on %s: %s", wled_host, err)
                 return False
+        else:
+            # If not clearing display, just log that we're stopping the keepalive
+            _LOGGER.debug("Stopped keepalive task for %s without clearing display", wled_host)
         
         _LOGGER.info("Successfully stopped DDP stream to %s", wled_host)
         return True

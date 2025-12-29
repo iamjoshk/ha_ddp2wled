@@ -7,5 +7,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/iamjoshk/ha_ddp2wled/issues",
   "requirements": ["aiohttp>=3.8.0", "Pillow>=9.0.0"],
-  "version": "0.2.0-b3"
+  "version": "0.2.0-b4"
 }
