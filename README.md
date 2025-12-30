@@ -1,4 +1,6 @@
 # HA DDP2WLED — DDP Sender for WLED
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled)](https://github.com/iamjoshk/ha_ddp2wled/releases)
+
 <img width="256" height="256" alt="ha_ddp2wled_icon" src="https://github.com/user-attachments/assets/3ed3db34-920a-4487-8c24-278185451c60" />
 
 This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but I was not satisfied with the result of the image. While searching for solutions to the compression, I stumbled on https://github.com/zak-45/WLEDVideoSync and decided to leverage a DDP stream instead.
@@ -29,21 +31,38 @@ This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but
 3. Go to Settings → Devices & Services → Add Integration
 4. Search for "HA DDP2WLED" and add it (name-only config flow)
 
-## Service: `ha_ddp2wled.send_to_wled_ddp`
-Required fields:
-- `wled_host`: IP/hostname of the WLED device
-- `width`: target width in pixels
-- `height`: target height in pixels
-- Either `image_url` **or** `image_path` (templatable)
+## Services
 
-Optional fields:
-- `brightness` (0-255, default 255), templateable
-- `segment_id` (default 0)
-- `timeout` seconds (default 10)
-- `keepalive_seconds` (default 0) — keep re-sending the frame so WLED does not revert after its realtime timeout
-- `keepalive_interval` (default 1) — seconds between keepalive sends
+### `ha_ddp2wled.send_to_wled_ddp`
+Sends an image to WLED device via DDP protocol with optional WLEDVideoSync-compatible image processing.
 
-### Example
+#### Required Parameters
+
+- `Image URL` **or** `Image Path` (both templatable)
+- `WLED Host`: IP address or hostname of the WLED device
+- `Width`: Target width in pixels for the matrix display
+- `Height`: Target height in pixels for the matrix display
+
+#### Optional Parameters
+- `Brightness`: Display brightness (0-255, default 255) — templatable
+- `Segment ID`: WLED segment to target (default 0)
+- `Timeout`: Network timeout in seconds (default 10)
+- `Keepalive Seconds`: Duration to keep re-sending the frame (default 0 = send once)
+- `Keepalive Interval`: Seconds between keepalive sends (default 1)
+
+#### Image Processing Options
+- `Auto Image Adjustment`: Enable automatic image adjustment (true/false, default true)
+- `Auto Clipping Percentage`: Histogram clipping percentage for auto image adjustment (0.0-50.0, default 0.0)
+- `Saturation`: Color saturation multiplier (0.0-2.0, default 1.0)
+- `Contrast`: Contrast adjustment (0.5-2.0, default 1.0)
+- `Sharpen`: Sharpening intensity (0.0-2.0, default 0.0)
+- `Gamma Correction`: Gamma correction (0.1-3.0, default 1.0)
+- `Red Balance`: Red channel color balance (1.0 = no change, 0.0 = no red, 2.0 = enhanced red)
+- `Green Balance`: Green channel color balance (1.0 = no change, 0.0 = no green, 2.0 = enhanced green)
+- `Blue Balance`: Blue channel color balance (1.0 = no change, 0.0 = no blue, 2.0 = enhanced blue)
+
+
+#### Basic Example
 ```yaml
 service: ha_ddp2wled.send_to_wled_ddp
 data:
@@ -52,12 +71,41 @@ data:
   width: 32
   height: 32
   brightness: 200
-
 ```
 
-Examples of templates for setting the brightness:
-- `brightness: {{ 10 if now().hour <= 8 or now().hour >= 22 else 128 }}` would change the dim the display from 10pm to 8am.
-- `brightness: {{ states('input_number.display_brightness') }}` would let you change the brightness from an independent slider.
+#### Advanced Example with Image Processing
+```yaml
+service: ha_ddp2wled.send_to_wled_ddp
+data:
+  image_url: "https://example.com/album-cover.jpg"
+  wled_host: "192.168.1.100"
+  width: 32
+  height: 32
+  brightness: "{{ states('input_number.display_brightness') | int }}"
+  saturation: 1.2
+  contrast: 1.1
+  sharpening: 0.5
+  auto_brightness: true
+  keepalive_seconds: 300
+```
+
+#### Brightness Template Examples
+- Time-based dimming: `brightness: "{{ 10 if now().hour <= 8 or now().hour >= 22 else 128 }}"`
+- Slider control: `brightness: "{{ states('input_number.display_brightness') | int }}"`
+- Conditional brightness: `brightness: "{{ 50 if is_state('sun.sun', 'below_horizon') else 200 }}"`
+
+### `ha_ddp2wled.stop_ddp_stream`
+Stops any active keepalive stream to the specified WLED device.
+
+#### Required Parameters
+- `wled_host`: IP address or hostname of the WLED device to stop streaming to
+
+#### Example
+```yaml
+service: ha_ddp2wled.stop_ddp_stream
+data:
+  wled_host: "192.168.1.100"
+```
 
 
 ## Reference: WLEDVideoSync upstream architecture
