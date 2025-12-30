@@ -1,7 +1,10 @@
 # HA DDP2WLED — DDP Sender for WLED
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled)](https://github.com/iamjoshk/ha_ddp2wled/releases)
+![GitHub Release](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled?include_prereleases&label=beta)
+
 
 <img width="256" height="256" alt="ha_ddp2wled_icon" src="https://github.com/user-attachments/assets/3ed3db34-920a-4487-8c24-278185451c60" />
+
 
 This started as a fork of https://github.com/ApolloAutomation/PixelMagicTool but I was not satisfied with the result of the image. While searching for solutions to the compression, I stumbled on https://github.com/zak-45/WLEDVideoSync and decided to leverage a DDP stream instead.
 
