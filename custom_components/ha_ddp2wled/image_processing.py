@@ -260,17 +260,36 @@ class ImageProcessor:
         _LOGGER.debug("Auto brightness/contrast calculation - min_gray: %d, max_gray: %d, alpha: %.2f, beta: %.2f", 
                      minimum_gray, maximum_gray, alpha, beta)
         
+        # Detect and handle problematic cases for very light images
+        image_is_very_light = minimum_gray > 200  # Most pixels are very bright
+        image_has_good_contrast = (maximum_gray - minimum_gray) > 50
+        
         # Check for problematic values that could cause black images
         if alpha > 10.0:
-            _LOGGER.warning("Very high contrast multiplier (alpha: %.2f) detected - this may cause image artifacts or black display", alpha)
+            _LOGGER.warning("Very high contrast multiplier (alpha: %.2f) detected", alpha)
+            if image_is_very_light and not image_has_good_contrast:
+                # For very light images with little contrast, use much more conservative adjustment
+                alpha = min(alpha, 3.0)  # Cap the contrast boost
+                beta = max(beta, -100)   # Don't make it too dark
+                _LOGGER.info("Applied conservative auto-brightness for very light image: alpha=%.2f, beta=%.2f", alpha, beta)
+        
         if beta < -200:
-            _LOGGER.warning("Very negative brightness adjustment (beta: %.2f) detected - this may result in black images", beta)
+            _LOGGER.warning("Very negative brightness adjustment (beta: %.2f) detected", beta)
+            if image_is_very_light:
+                # For very light images, don't apply extreme darkening
+                beta = max(beta, -150)
+                _LOGGER.info("Reduced extreme darkening for light image: beta=%.2f", beta)
+                
         if minimum_gray == maximum_gray:
-            _LOGGER.warning("Image has no contrast (min_gray == max_gray: %d) - this will result in black display", minimum_gray)
+            _LOGGER.warning("Image has no contrast (min_gray == max_gray: %d) - skipping auto-brightness", minimum_gray)
+            return img  # Return original image instead of applying broken correction
         
         # Apply the calculated adjustments using PIL
         # This is equivalent to: result = alpha * img + beta
-        enhanced = ImageEnhance.Contrast(img).enhance(alpha)
+        enhanced = img
+        if alpha != 1.0:
+            enhanced = ImageEnhance.Contrast(enhanced).enhance(alpha)
+            
         if beta != 0:
             # Apply brightness adjustment
             brightness_factor = 1.0 + (beta / 255.0)
@@ -278,10 +297,9 @@ class ImageProcessor:
             
             # Safety check for brightness factor
             if brightness_factor <= 0:
-                _LOGGER.error("Calculated brightness factor is negative or zero (%.2f) - this will cause black image. Using 0.1 instead.", brightness_factor)
-                brightness_factor = 0.1
-                
-            enhanced = ImageEnhance.Brightness(enhanced).enhance(brightness_factor)
+                _LOGGER.error("Calculated brightness factor is negative or zero (%.2f) - skipping brightness adjustment", brightness_factor)
+            else:
+                enhanced = ImageEnhance.Brightness(enhanced).enhance(brightness_factor)
         
         return enhanced
 
