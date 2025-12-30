@@ -297,6 +297,29 @@ class DDP2WLEDAPI:
                 # Note: Validation already done in _load_image_data, this is just for processing
                 _LOGGER.debug("Processing image: format=%s, size=%dx%d, mode=%s", 
                              img.format, img.width, img.height, img.mode)
+                             
+                # Log basic image statistics for debugging black image issues
+                if img.mode == 'RGB' or img.mode == 'RGBA':
+                    pixels = list(img.getdata())
+                    if pixels:
+                        # Quick sample of pixel values for debugging
+                        sample_pixels = pixels[:min(100, len(pixels))]
+                        if img.mode == 'RGB':
+                            all_values = [val for pixel in sample_pixels for val in pixel]
+                        else:  # RGBA
+                            all_values = [val for pixel in sample_pixels for val in pixel[:3]]  # Ignore alpha
+                        
+                        if all_values:
+                            avg_brightness = sum(all_values) / len(all_values)
+                            _LOGGER.debug("Original image sample stats: avg_brightness=%.1f, sample_size=%d", 
+                                        avg_brightness, len(sample_pixels))
+                            
+                            # Warn about potentially problematic images
+                            if avg_brightness > 240:
+                                _LOGGER.info("Image appears very bright (avg=%.1f) - auto_bright may over-correct", avg_brightness)
+                            elif avg_brightness < 15:
+                                _LOGGER.info("Image appears very dark (avg=%.1f) - may result in black display", avg_brightness)
+                                
             except Exception as err:
                 _LOGGER.error("Failed to open image for processing: %s", err)
                 raise ValueError(f"Failed to open image for processing: {err}") from err

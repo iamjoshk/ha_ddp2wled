@@ -42,31 +42,47 @@ class ImageProcessor:
         Returns:
             Processed PIL Image
         """
+        # Debug: Log initial image statistics
+        initial_stats = ImageProcessor._get_image_stats(img)
+        _LOGGER.debug("Image processing started - Initial stats: %s", initial_stats)
+        
         # Apply saturation adjustment
         if filters.get("saturation", 1.0) != 1.0:
             img = ImageProcessor.adjust_saturation(img, filters["saturation"])
+            _LOGGER.debug("Applied saturation: %s", filters["saturation"])
 
-        # Apply brightness adjustment
+                # Apply brightness adjustment
         if filters.get("brightness", 1.0) != 1.0:
             img = ImageProcessor.adjust_brightness(img, filters["brightness"])
+            _LOGGER.debug("Applied brightness: %s", filters["brightness"])
 
         # Apply contrast adjustment
         if filters.get("contrast", 1.0) != 1.0:
             img = ImageProcessor.adjust_contrast(img, filters["contrast"])
+            _LOGGER.debug("Applied contrast: %s", filters["contrast"])
 
         # Apply sharpening
         if filters.get("sharpen", 0.0) > 0.0:
             img = ImageProcessor.apply_sharpening(img, filters["sharpen"])
+            _LOGGER.debug("Applied sharpening: %s", filters["sharpen"])
 
         # Apply color balance
-        if (filters.get("balance_r", 1.0) != 1.0 or 
-            filters.get("balance_g", 1.0) != 1.0 or 
-            filters.get("balance_b", 1.0) != 1.0):
-            img = ImageProcessor.adjust_color_balance(img, {
+        if any(filters.get(f"balance_{c}", 1.0) != 1.0 for c in ["r", "g", "b"]):
+            balance = {
                 "r": filters.get("balance_r", 1.0),
                 "g": filters.get("balance_g", 1.0),
                 "b": filters.get("balance_b", 1.0),
-            })
+            }
+            img = ImageProcessor.adjust_color_balance(img, balance)
+            _LOGGER.debug("Applied color balance: %s", balance)
+
+        # Debug: Log final image statistics
+        final_stats = ImageProcessor._get_image_stats(img)
+        _LOGGER.debug("Image processing completed - Final stats: %s", final_stats)
+        
+        # Check for potential black image
+        if final_stats["max_value"] < 10:  # Very dark image
+            _LOGGER.warning("Processed image appears very dark (max value: %d) - this may result in black display", final_stats["max_value"])
 
         return img
 
@@ -201,6 +217,8 @@ class ImageProcessor:
         Returns:
             Auto-adjusted image with improved brightness and contrast
         """
+        _LOGGER.debug("Starting automatic brightness/contrast adjustment with clip_hist_percent: %s", clip_hist_percent)
+        
         # Convert to grayscale for histogram analysis
         gray = img.convert('L')
         
@@ -239,15 +257,65 @@ class ImageProcessor:
             alpha = 1.0
             beta = 0.0
         
+        _LOGGER.debug("Auto brightness/contrast calculation - min_gray: %d, max_gray: %d, alpha: %.2f, beta: %.2f", 
+                     minimum_gray, maximum_gray, alpha, beta)
+        
+        # Check for problematic values that could cause black images
+        if alpha > 10.0:
+            _LOGGER.warning("Very high contrast multiplier (alpha: %.2f) detected - this may cause image artifacts or black display", alpha)
+        if beta < -200:
+            _LOGGER.warning("Very negative brightness adjustment (beta: %.2f) detected - this may result in black images", beta)
+        if minimum_gray == maximum_gray:
+            _LOGGER.warning("Image has no contrast (min_gray == max_gray: %d) - this will result in black display", minimum_gray)
+        
         # Apply the calculated adjustments using PIL
         # This is equivalent to: result = alpha * img + beta
         enhanced = ImageEnhance.Contrast(img).enhance(alpha)
         if beta != 0:
             # Apply brightness adjustment
             brightness_factor = 1.0 + (beta / 255.0)
+            _LOGGER.debug("Applying brightness factor: %.2f", brightness_factor)
+            
+            # Safety check for brightness factor
+            if brightness_factor <= 0:
+                _LOGGER.error("Calculated brightness factor is negative or zero (%.2f) - this will cause black image. Using 0.1 instead.", brightness_factor)
+                brightness_factor = 0.1
+                
             enhanced = ImageEnhance.Brightness(enhanced).enhance(brightness_factor)
         
         return enhanced
+
+    @staticmethod
+    def _get_image_stats(img: Image.Image) -> dict:
+        """
+        Get basic statistics about an image for debugging.
+        
+        Args:
+            img: PIL Image to analyze
+            
+        Returns:
+            Dictionary with min, max, and average values
+        """
+        # Convert to RGB if not already
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+            
+        pixels = list(img.getdata())
+        if not pixels:
+            return {"min_value": 0, "max_value": 0, "avg_value": 0}
+        
+        # Calculate min, max, and average across all channels
+        all_values = []
+        for r, g, b in pixels:
+            all_values.extend([r, g, b])
+        
+        return {
+            "min_value": min(all_values),
+            "max_value": max(all_values),
+            "avg_value": sum(all_values) / len(all_values),
+            "size": img.size,
+            "mode": img.mode
+        }
 
     @staticmethod
     def process_image_for_led(img: Image.Image, 
