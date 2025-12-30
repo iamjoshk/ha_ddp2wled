@@ -1,6 +1,7 @@
 # HA DDP2WLED — DDP Sender for WLED
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled)](https://github.com/iamjoshk/ha_ddp2wled/releases)
-![GitHub Release](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled?include_prereleases&label=beta)
+![GitHub Release](https://img.shields.io/github/v/release/iamjoshk/ha_ddp2wled?include_prereleases&label=beta&labelColor=purple&color=lightgrey)
+
 
 
 <img width="256" height="256" alt="ha_ddp2wled_icon" src="https://github.com/user-attachments/assets/3ed3db34-920a-4487-8c24-278185451c60" />
