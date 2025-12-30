@@ -80,7 +80,7 @@ send_to_wled_ddp:
       name: Auto Clipping Percentage
       description: >-
         Histogram clipping percentage for auto brightness/contrast (lower = less aggressive).
-        Only used when Auto Brightness/Contrast is enabled.
+        Only used when Auto Image Adjustment is enabled.
       advanced: true
       selector:
         number:
