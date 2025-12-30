@@ -73,7 +73,7 @@ SEND_TO_WLED_DDP_SCHEMA = vol.Schema(
             vol.Coerce(float), vol.Range(min=0.1, max=2.0)
         ),
         vol.Optional("auto_bright", default=True): cv.boolean,
-        vol.Optional("clip_hist_percent"): vol.All(
+        vol.Optional("clip_hist_percent", default=0.0): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=50.0)
         ),
     }

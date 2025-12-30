@@ -201,7 +201,7 @@ class ImageProcessor:
         return img.point(gamma_table * 3)  # *3 for RGB channels
 
     @staticmethod
-    def automatic_brightness_and_contrast(img: Image.Image, clip_hist_percent: float = 25.0) -> Image.Image:
+    def automatic_brightness_and_contrast(img: Image.Image, clip_hist_percent: float = 0.0) -> Image.Image:
         """
         Automatically adjust brightness and contrast of an image using PIL.
 
@@ -212,7 +212,7 @@ class ImageProcessor:
 
         Args:
             img: Input PIL Image (RGB)
-            clip_hist_percent: Percentage of histogram to clip (0-50, typically 25)
+            clip_hist_percent: Percentage of histogram to clip (0-50, default 0 for stability)
 
         Returns:
             Auto-adjusted image with improved brightness and contrast
